@@ -1,0 +1,177 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id                String    @id
+  name              String    @db.Text
+  email             String    @unique
+  emailVerified     Boolean   @default(false)
+  image             String?   @db.Text
+  phone             String?   @db.Text
+  created_by        String?   @default("system")
+  updated_by        String?
+  is_deleted        Boolean   @default(false)
+  temporaryPassword Boolean   @default(true)
+  isNew             Boolean   @default(true)
+  loginCount        Int?      @default(0)
+  lastLogin         String?   @db.Text
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @default(now()) @updatedAt
+
+  sessions          Session[]
+  accounts          Account[]
+
+  @@map("user")
+}
+
+model Session {
+  id        String   @id
+  expiresAt DateTime
+  token     String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  ipAddress String?  @db.Text
+  address   String?  @db.Text
+  userAgent String?  @db.Text
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([token])
+  @@map("session")
+}
+
+model Account {
+  id                    String    @id
+  accountId             String    @db.Text
+  providerId            String    @db.Text
+  userId                String
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
+  accessTokenExpiresAt  DateTime?
+  refreshTokenExpiresAt DateTime?
+  scope                 String?   @db.Text
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@map("account")
+}
+
+model Verification {
+  id         String   @id
+  identifier String   @db.Text
+  value      String   @db.Text
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("verification")
+}
+
+model contacts {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.Text
+  phone     String   @db.Text
+  whatsapp  Boolean  @default(false)
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedBy String?
+  updatedAt DateTime? @default(now()) @updatedAt
+  isDeleted Boolean  @default(false)
+
+  messages  message[]
+  @@map("contacts")
+}
+
+
+model posts {
+  id        Int           @id @default(autoincrement())
+  schedule  DateTime
+  text      String        @db.Text
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedBy String?
+  updatedAt DateTime? @default(now()) @updatedAt
+  isDeleted Boolean  @default(false)
+
+  images    imagesPosts[]
+  messages  message[]
+
+  // relación: post → template (opcional)
+  contentTemplateId String? // referencia al template.id
+  contentTemplate   TwilioContentTemplate? @relation(fields: [contentTemplateId], references: [id], onDelete: SetNull)
+
+  @@map("posts")
+  @@index([contentTemplateId])
+}
+
+model imagesPosts {
+  id        Int      @id @default(autoincrement())
+  url       String   @db.Text
+  postId    Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+  post      posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@map("images_posts")
+}
+
+model message {
+  id        Int      @id @default(autoincrement())
+  postId    Int
+  contactId Int
+  status    String   @default("pending") // pending, sent, failed, delivered
+  sentAt    DateTime?
+
+  createdBy String
+  createdAt DateTime @default(now())
+  updatedBy String?
+  updatedAt DateTime? @default(now()) @updatedAt
+  isDeleted Boolean  @default(false)
+
+  // Relaciones
+  post      posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  contact   contacts @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@map("message")
+}
+
+// schema.prisma
+
+model TwilioContentTemplate {
+  id           String   @id @default(cuid())
+  sid          String   @unique @db.VarChar(64)   // "HX..." de Twilio
+  accountSid   String   @db.VarChar(34)           // "AC..."
+  friendlyName String
+  language     String   @db.VarChar(16)
+  url          String
+
+  dateCreated  DateTime // "2025-11-04T22:42:23Z"
+  dateUpdated  DateTime
+
+  links        Json     // { approval_create, approval_fetch }
+  types        Json     // { "twilio/text": { body: "..."} }
+  variables    Json     // { "1": "Cliente" }
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  // back-relation
+  posts        posts[]
+
+  @@map("twilio_content_templates")
+  @@index([accountSid])
+  @@index([friendlyName])
+}
