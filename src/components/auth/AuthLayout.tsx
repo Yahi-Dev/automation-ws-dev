@@ -15,7 +15,7 @@ export default function AuthLayout({
       {/* Background (optional: swap for your own) */}
       <div
         className="absolute inset-0 bg-cover bg-center opacity-70"
-        style={{ backgroundImage: `url(/ChatGPTImage.png)` }}
+        style={{ backgroundImage: `url(/auth-background.png)` }}
       />
 
       <div className="relative mx-auto flex min-h-screen max-w-6xl flex-col items-center justify-center">

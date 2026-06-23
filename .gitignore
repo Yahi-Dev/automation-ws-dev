@@ -45,3 +45,29 @@ env.url
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# editor / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# logs
+*.log
+logs/
+
+# caches
+.turbo/
+.cache/
+*.tsbuildinfo
+
+# herramientas locales y archivos generados (no versionar)
+.agents/
+.skills/
+skills-lock.json
