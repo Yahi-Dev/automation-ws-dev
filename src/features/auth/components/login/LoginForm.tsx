@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import type React from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle } from "lucide-react";
+import { Mail, Lock, ArrowRight, Eye, EyeOff, AlertTriangle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import Image from "next/image";
 import { useRateLimit } from "@/src/hooks/use-rate-limit";
@@ -58,15 +58,17 @@ export function LoginInner() {
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
-    const currentRateLimit = await checkRateLimit();
-    if (currentRateLimit?.isBlocked) {
-      setError(`Demasiados intentos fallidos. Intenta nuevamente en ${currentRateLimit.retryAfter} segundos.`);
-      return;
-    }
-
+    // Mostrar "cargando" de inmediato al hacer clic (antes de cualquier llamada)
     setProcessing(true);
     setError(null);
     setStatus(undefined);
+
+    const currentRateLimit = await checkRateLimit();
+    if (currentRateLimit?.isBlocked) {
+      setError(`Demasiados intentos fallidos. Intenta nuevamente en ${currentRateLimit.retryAfter} segundos.`);
+      setProcessing(false);
+      return;
+    }
 
     try {
       const { error: signInError } = (await authClient.signIn.email({
@@ -225,11 +227,16 @@ export function LoginInner() {
                       className="h-12 w-full bg-gradient-to-r from-green-600 to-emerald-600 font-bold uppercase tracking-wider text-white shadow-lg transition-all duration-200 hover:from-green-700 hover:to-emerald-700 hover:shadow-xl focus:ring-4 focus:ring-green-500/30 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {processing ? (
-                        <ArrowRight className="mr-2 h-5 w-5 animate-pulse" />
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Iniciando sesión...
+                        </>
                       ) : (
-                        <ArrowRight className="mr-2 h-5 w-5" />
+                        <>
+                          <ArrowRight className="mr-2 h-5 w-5" />
+                          {rateLimit?.isBlocked ? 'IP Bloqueada' : 'Iniciar Sesión'}
+                        </>
                       )}
-                      {rateLimit?.isBlocked ? 'IP Bloqueada' : 'Iniciar Sesión'}
                     </Button>
 
                     {/* Información de rate limit */}
