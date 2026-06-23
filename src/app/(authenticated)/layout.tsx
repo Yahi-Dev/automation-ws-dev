@@ -3,7 +3,7 @@ import { AppSidebar } from "@/src/components/app-sidebar";
 import { SiteHeader } from "@/src/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/src/components/ui/sidebar";
 import { auth } from "@/src/lib/auth";
-import { Redis } from "@upstash/redis";
+import redis from "@/src/lib/redis";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
@@ -17,14 +17,9 @@ export default async function AuthenticatedLayout({children,}: {children: React.
   // Si better-auth expone el token de sesión, lo cacheamos.
   const token = session.session?.token as string | undefined;
   if (token) {
-    const redis = new Redis({
-      url: process.env.UPSTASH_REDIS_REST_URL!,
-      token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-    });
-    // TTL largo y se renueva en cada visita
-    await redis.set(`sess_status:${token}`, {
-      ex: 60 * 60 * 24 * 30, // 30 días
-    });
+    // Cachea el estado de sesión para el middleware (TTL largo, se renueva en cada visita).
+    // El cliente `redis` es resiliente: si Upstash no está disponible, no falla.
+    await redis.set(`sess_status:${token}`, "approved", { ex: 60 * 60 * 24 * 30 });
   }
 
   // 4) Tu layout original intacto

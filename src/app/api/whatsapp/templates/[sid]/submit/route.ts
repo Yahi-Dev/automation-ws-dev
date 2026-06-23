@@ -13,14 +13,15 @@ function isCustomError(obj: unknown): obj is CustomError {
     return typeof obj === "object" && obj !== null;
 }
 
-export async function POST(req: NextRequest, { params }: { params: { sid: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ sid: string }> }) {
     try {
+        const { sid } = await params;
         const { name, category } = await req.json();
         // Twilio: POST /Content/{ContentSid}/ApprovalRequests/whatsapp con { name, category }
         // name = nombre del template de WhatsApp (único por WABA)
         // category = "UTILITY" | "MARKETING" | "AUTHENTICATION"
         // Flujo documentado aquí. :contentReference[oaicite:3]{index=3}
-        const resp = await contentFetch(`/Content/${params.sid}/ApprovalRequests/whatsapp`, {
+        const resp = await contentFetch(`/Content/${sid}/ApprovalRequests/whatsapp`, {
             method: "POST",
             body: JSON.stringify({
                 name: name ?? "mi_template_whatsapp",

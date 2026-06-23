@@ -9,11 +9,12 @@ type CustomError = {
     status?: number;
 };
 
-export async function GET(_req: NextRequest, { params }: { params: { sid: string } }) {
+export async function GET(_req: NextRequest, { params }: { params: Promise<{ sid: string }> }) {
     try {
+        const { sid } = await params;
         // GET /Content/{ContentSid}/ApprovalRequests retorna histórico/estatus
         // Estados: Received, Pending, Approved, Rejected (con rechazo en rejection_reason). :contentReference[oaicite:4]{index=4}
-        const approvals = await contentFetch(`/Content/${params.sid}/ApprovalRequests`);
+        const approvals = await contentFetch(`/Content/${sid}/ApprovalRequests`);
         return NextResponse.json({ ok: true, approvals });
     } catch (e: unknown) {
         let message = "Unknown error";

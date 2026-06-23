@@ -1,15 +1,10 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getSessionCookie } from "better-auth/cookies";
-import { Redis } from "@upstash/redis";
+import redis from './lib/redis';
 import { loginRateLimit } from './lib/rate-limit';
 
 type AllowedMethod = 'POST';
-
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
-});
 
 const RATE_LIMITED_ENDPOINTS = {
   '/api/auth/sign-in/email': ['POST'], // Incrementa intentos
