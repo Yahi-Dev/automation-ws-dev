@@ -132,8 +132,16 @@ model message {
   id        Int      @id @default(autoincrement())
   postId    Int
   contactId Int
-  status    String   @default("pending") // pending, sent, failed, delivered
-  sentAt    DateTime?
+  // estados: pending, queued, sent, delivered, read, failed, undelivered
+  status    String   @default("pending")
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  readAt      DateTime?
+
+  // tracking del proveedor (Twilio)
+  providerSid  String?  @db.VarChar(64) // "SM..." / "MM..." de Twilio
+  errorCode    String?  @db.VarChar(32)
+  errorMessage String?  @db.Text
 
   createdBy String
   createdAt DateTime @default(now())
@@ -145,6 +153,9 @@ model message {
   post      posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
   contact   contacts @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
+  @@index([providerSid])
+  @@index([postId])
+  @@index([status])
   @@map("message")
 }
 

@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { DataTable } from "@/src/components/data-table"
 import { Button } from "@/src/components/ui/button"
-import { MoreHorizontal, Edit, Trash2, Image as ImageIcon, Eye } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Image as ImageIcon, Eye, Send, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,12 +13,21 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/src/components/ui/dropdown-menu"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/src/components/ui/dialog"
 import { useRouter } from "next/navigation"
 import { ColumnDef } from "@tanstack/react-table"
 import { PostsType } from "../types"
 import { DeleteConfirmationModal } from "@/src/components/ui/delete"
 import { Skeleton } from "@/src/components/ui/skeleton"
 import { useDeletePost, useGetAllPosts } from "../hooks/use-posts"
+import { useSendCampaign } from "@/src/features/messages/hooks/use-message"
 import { Badge } from "@/src/components/ui/badge"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
@@ -74,11 +83,14 @@ export default function PostsTable() {
   const [primaryLoading, setPrimaryLoading] = useState(true)
   const { fetchAll, posts } = useGetAllPosts()
   const { remove: handleDelete } = useDeletePost()
+  const { send: handleSend, isLoading: isSending } = useSendCampaign()
 
   const [currentPostId, setCurrentPostId] = useState<number | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [inspectPostId, setInspectPostId] = useState<number | null>(null)
   const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const [sendPostId, setSendPostId] = useState<number | null>(null)
+  const [isSendModalOpen, setIsSendModalOpen] = useState(false)
 
   useEffect(() => {
     fetchAll()
@@ -118,6 +130,19 @@ export default function PostsTable() {
   const handleEditClick = useCallback((id: number) => {
     router.push(`/posts/${id}/edit`)
   }, [router])
+
+  const handleSendClick = (id: number) => {
+    setSendPostId(id)
+    setIsSendModalOpen(true)
+  }
+
+  const handleConfirmSend = async () => {
+    if (!sendPostId) return
+    await handleSend(sendPostId)
+    setIsSendModalOpen(false)
+    setSendPostId(null)
+    await fetchAll()
+  }
 
   const columns: ColumnDef<PostsType>[] = [
     {
@@ -222,6 +247,13 @@ export default function PostsTable() {
                   <Eye className="mr-2 h-4 w-4" />
                   Inspeccionar
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  disabled={!post?._count?.messages || post._count.messages === 0}
+                  onClick={() => handleSendClick(post.id)}
+                >
+                  <Send className="mr-2 h-4 w-4" />
+                  Enviar campaña
+                </DropdownMenuItem>
                 {/*<DropdownMenuItem onClick={() => router.push(`/posts/${post.id}/edit`)}>
                   <Edit className="mr-2 h-4 w-4" />
                   Editar
@@ -284,6 +316,43 @@ export default function PostsTable() {
           onEditClick={handleEditClick}
         />
       )}
+
+      {/* Confirmación de envío de campaña */}
+      <Dialog open={isSendModalOpen} onOpenChange={setIsSendModalOpen}>
+        <DialogContent className="sm:max-w-md rounded-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Send className="h-5 w-5 text-primary" />
+              Enviar campaña por WhatsApp
+            </DialogTitle>
+            <DialogDescription>
+              Se enviará el mensaje a{" "}
+              <strong>
+                {posts.find((p) => p.id === sendPostId)?._count?.messages ?? 0} contacto(s)
+              </strong>{" "}
+              asignados que estén pendientes. Esta acción no se puede deshacer.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsSendModalOpen(false)}
+              disabled={isSending}
+            >
+              Cancelar
+            </Button>
+            <Button type="button" onClick={handleConfirmSend} disabled={isSending}>
+              {isSending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Send className="mr-2 h-4 w-4" />
+              )}
+              {isSending ? "Enviando..." : "Enviar ahora"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

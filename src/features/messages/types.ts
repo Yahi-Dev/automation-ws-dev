@@ -1,10 +1,24 @@
 // src/features/messages/types/index.ts
+export type MessageStatus =
+  | 'pending'
+  | 'queued'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | 'failed'
+  | 'undelivered';
+
 export interface MessageType {
   id: number;
   postId: number;
   contactId: number;
-  status: 'pending' | 'sent' | 'failed' | 'delivered';
+  status: MessageStatus;
   sentAt: Date | null;
+  deliveredAt?: Date | null;
+  readAt?: Date | null;
+  providerSid?: string | null;
+  errorCode?: string | null;
+  errorMessage?: string | null;
   createdBy: string;
   createdAt: Date;
   updatedBy: string | null;
@@ -37,7 +51,7 @@ export interface CreateMessageData {
 }
 
 export interface UpdateMessageData {
-  status?: 'pending' | 'sent' | 'failed' | 'delivered';
+  status?: MessageStatus;
   sentAt?: Date;
 }
 

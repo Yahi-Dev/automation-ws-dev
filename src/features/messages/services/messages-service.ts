@@ -147,6 +147,48 @@ export async function deleteMessage(id: number): Promise<MessagesResponse> {
   }
 }
 
+export interface SendCampaignSummary {
+  postId: number;
+  total: number;
+  sent: number;
+  failed: number;
+  results: Array<{ messageId: number; contactId: number; ok: boolean; sid?: string; error?: string }>;
+}
+
+export interface SendCampaignResponse {
+  success: boolean;
+  message: string;
+  data?: SendCampaignSummary;
+}
+
+/**
+ * Dispara el envío masivo (broadcast) de un post a sus contactos asignados.
+ * Llama a POST /api/whatsapp.
+ */
+export async function sendCampaign(
+  postId: number,
+  options?: { batchSize?: number; delayMs?: number; includeSent?: boolean }
+): Promise<SendCampaignResponse> {
+  try {
+    const response = await fetch("/api/whatsapp", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ postId, ...options }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Error al enviar la campaña");
+    }
+
+    return result;
+  } catch (error) {
+    console.error("Error sending campaign:", error);
+    throw error;
+  }
+}
+
 export async function assignMessageToContacts(
   postId: number,
   contactIds: number[]

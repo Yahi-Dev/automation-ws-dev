@@ -3,14 +3,16 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { MessageWithRelations } from "../types";
-import { 
-  MessagesResponse, 
-  createMessage, 
-  deleteMessage, 
-  getAllMessages, 
-  getMessageById, 
+import {
+  MessagesResponse,
+  SendCampaignResponse,
+  createMessage,
+  deleteMessage,
+  getAllMessages,
+  getMessageById,
   updateMessage,
-  assignMessageToContacts 
+  assignMessageToContacts,
+  sendCampaign
 } from "../services/messages-service";
 import { MessageFormValues, MessageUpdateValues } from "../schema/validations";
 import { getAllPosts } from "../../posts/services/posts-service";
@@ -320,6 +322,48 @@ export function useUpdateMessage(id: number) {
 
   return { update, isLoading, error, clearError };
 };
+
+export function useSendCampaign() {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const send = async (
+    postId: number,
+    options?: { batchSize?: number; delayMs?: number; includeSent?: boolean }
+  ): Promise<SendCampaignResponse | null> => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      const response = await sendCampaign(postId, options);
+
+      if (response.success) {
+        const summary = response.data;
+        toast.success("Campaña enviada", {
+          description: summary
+            ? `${summary.sent} enviado(s), ${summary.failed} fallido(s) de ${summary.total}.`
+            : response.message,
+        });
+        return response;
+      } else {
+        throw new Error(response.message || "Error al enviar la campaña");
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido al enviar la campaña";
+      setError(errorMessage);
+      toast.error("Error al enviar la campaña", {
+        description: errorMessage,
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const clearError = () => setError(null);
+
+  return { send, isLoading, error, clearError };
+}
 
 export function useAssignMessage() {
   const [isLoading, setIsLoading] = useState(false);

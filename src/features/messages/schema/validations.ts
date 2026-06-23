@@ -7,7 +7,7 @@ export const messageCreateSchema = z.object({
 });
 
 export const messageUpdateSchema = z.object({
-  status: z.enum(['pending', 'sent', 'failed', 'delivered']).optional(),
+  status: z.enum(['pending', 'queued', 'sent', 'delivered', 'read', 'failed', 'undelivered']).optional(),
   sentAt: z.string().datetime().optional(),
 });
 

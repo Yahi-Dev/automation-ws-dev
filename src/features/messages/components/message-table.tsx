@@ -59,7 +59,9 @@ export default function MessagesTable() {
     switch (status) {
       case 'sent': return 'default'
       case 'delivered': return 'secondary'
+      case 'read': return 'secondary'
       case 'failed': return 'destructive'
+      case 'undelivered': return 'destructive'
       default: return 'outline'
     }
   }
@@ -67,9 +69,12 @@ export default function MessagesTable() {
   const getStatusText = (status: string) => {
     switch (status) {
       case 'pending': return 'Pendiente'
+      case 'queued': return 'En cola'
       case 'sent': return 'Enviado'
       case 'delivered': return 'Entregado'
+      case 'read': return 'Leído'
       case 'failed': return 'Fallido'
+      case 'undelivered': return 'No entregado'
       default: return status
     }
   }
