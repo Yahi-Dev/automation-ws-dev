@@ -36,6 +36,9 @@ yarn-error.log*
 # env files (can opt-in for committing if needed)
 .env*
 
+# local Windows shortcut to the .env file (machine-specific, do not version)
+env.url
+
 # vercel
 .vercel
 

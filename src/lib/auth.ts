@@ -10,7 +10,7 @@ import { passwordUpdatedTemplate, passwordUpdatedText, resetPasswordTemplate, re
 const logoUrl = process.env.NEXT_PUBLIC_APP_URL_LOGO;
 
 export const auth = betterAuth({
-  database: prismaAdapter(prisma, { provider: "sqlserver" }),
+  database: prismaAdapter(prisma, { provider: "mysql" }),
   baseURL: process.env.BETTER_AUTH_URL,
 
   user: {
