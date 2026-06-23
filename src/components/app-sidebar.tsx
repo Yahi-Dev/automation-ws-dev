@@ -13,7 +13,6 @@ import {
 import { NavMain } from "@/src/components/nav-main"
 import { NavUser } from "@/src/components/nav-user"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/src/components/ui/sidebar"
-import { authClient } from "@/src/lib/auth-client"
 import { AudioWaveform, Command, GalleryVerticalEnd } from "lucide-react"
 import Image from "next/image"
 import { FieldSeparator } from "./ui/field"
@@ -45,15 +44,12 @@ const data = {
   ],
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  const { data: session } = authClient.useSession()
+type AppSidebarUser = { name: string; email: string; avatar: string }
 
-  const user = {
-    name: session?.user.name ?? "",
-    email: session?.user.email ?? "",
-    avatar: session?.user.image ?? "",
-  };
-
+export function AppSidebar({
+  user,
+  ...props
+}: React.ComponentProps<typeof Sidebar> & { user: AppSidebarUser }) {
   return (
     <Sidebar
       collapsible="offcanvas"
