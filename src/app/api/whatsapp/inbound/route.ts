@@ -6,6 +6,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/src/lib/redis";
 import { detectConsentKeyword, findContactByPhone, applyConsent } from "@/src/lib/consent";
 import { getTwilioConfig } from "@/src/lib/app-config";
+import { isValidTwilioSignature, formToParams } from "@/src/lib/twilio-webhook";
 
 export const runtime = "nodejs";
 
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
     }
 
     const form = await req.formData();
+
+    // Validación de firma (opt-in): rechaza peticiones no firmadas por Twilio.
+    if (!(await isValidTwilioSignature(req, formToParams(form)))) {
+      return new NextResponse("Invalid signature", { status: 403 });
+    }
+
     const from = String(form.get("From") ?? "");
     const body = String(form.get("Body") ?? "");
     if (!from) return twiml();

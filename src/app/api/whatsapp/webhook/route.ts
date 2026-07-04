@@ -6,6 +6,7 @@ import prisma from "@/src/lib/prisma";
 import { redis } from "@/src/lib/redis";
 import { mapTwilioStatus, statusRank } from "@/src/lib/whatsapp";
 import { getTwilioConfig } from "@/src/lib/app-config";
+import { isValidTwilioSignature, formToParams } from "@/src/lib/twilio-webhook";
 
 export const runtime = "nodejs";
 
@@ -24,6 +25,12 @@ export async function POST(req: NextRequest) {
 
     // Twilio envía application/x-www-form-urlencoded
     const form = await req.formData();
+
+    // Validación de firma (opt-in): rechaza peticiones no firmadas por Twilio.
+    if (!(await isValidTwilioSignature(req, formToParams(form)))) {
+      return new NextResponse("Invalid signature", { status: 403 });
+    }
+
     const messageSid = String(form.get("MessageSid") ?? form.get("SmsSid") ?? "");
     const rawStatus = String(form.get("MessageStatus") ?? form.get("SmsStatus") ?? "");
     const errorCode = form.get("ErrorCode") ? String(form.get("ErrorCode")) : null;
