@@ -90,6 +90,11 @@ export async function POST(req: NextRequest) {
     const contentSid = post.contentTemplate?.sid;
     const actor = session.user.email ?? "system";
 
+    // TODO (M4): cuando TwilioContentTemplate persista `approvalStatus`, bloquear el
+    // envío de plantillas de marketing que no estén 'approved'. Ej.:
+    //   if (contentSid && post.contentTemplate?.approvalStatus !== 'approved')
+    //     return HttpResponse.sendBadRequest('La plantilla no está aprobada por WhatsApp');
+
     let sent = 0;
     let failed = 0;
     const results: SendResult[] = [];

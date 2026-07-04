@@ -70,10 +70,14 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
   const { to, body, contentSid, contentVariables, statusCallback } = params;
   const client = getTwilioClient();
 
-  const from = process.env.TWILIO_PHONE_NUMBER; // ej: "whatsapp:+14155238886"
-  if (!from) {
-    throw new Error("TWILIO_PHONE_NUMBER (sender de WhatsApp) no está configurado");
+  // Sender de WhatsApp: preferir el sender aprobado (producción); si no, el sandbox.
+  const rawFrom = process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_PHONE_NUMBER;
+  if (!rawFrom) {
+    throw new Error(
+      "Sender de WhatsApp no configurado (define TWILIO_WHATSAPP_FROM o TWILIO_PHONE_NUMBER)"
+    );
   }
+  const from = toWhatsAppAddress(rawFrom);
 
   const opts: TwilioCreateOptions = {
     from,

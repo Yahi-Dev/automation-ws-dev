@@ -1,18 +1,11 @@
 // components/nav-user.tsx
 "use client";
 
-import {
-  IconDotsVertical,
-  IconLogout,
-  IconUserCircle,
-  IconBell,
-  IconShield,
-} from "@tabler/icons-react";
+import { IconDotsVertical, IconLogout } from "@tabler/icons-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/src/components/ui/avatar";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -26,7 +19,6 @@ import {
 } from "@/src/components/ui/sidebar";
 import { authClient } from "@/src/lib/auth-client";
 import { useRouter } from "next/navigation";
-import Link from "next/link";
 
 export function NavUser({
   user,
@@ -105,30 +97,7 @@ export function NavUser({
 
             <DropdownMenuSeparator className="bg-emerald-100/50" />
 
-            <DropdownMenuGroup>
-              <DropdownMenuItem className="cursor-pointer focus:bg-emerald-50 focus:text-emerald-700">
-                <Link href="/account-settings" className="flex items-center gap-2 w-full">
-                  <IconUserCircle className="text-emerald-600 size-4" />
-                  <span>Mi Cuenta</span>
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer focus:bg-emerald-50 focus:text-emerald-700">
-                <div className="flex items-center gap-2">
-                  <IconBell className="text-emerald-600 size-4" />
-                  <span>Notificaciones</span>
-                </div>
-              </DropdownMenuItem>
-              <DropdownMenuItem className="cursor-pointer focus:bg-emerald-50 focus:text-emerald-700">
-                <div className="flex items-center gap-2">
-                  <IconShield className="text-emerald-600 size-4" />
-                  <span>Privacidad</span>
-                </div>
-              </DropdownMenuItem>
-            </DropdownMenuGroup>
-
-            <DropdownMenuSeparator className="bg-emerald-100/50" />
-
-            <DropdownMenuItem 
+            <DropdownMenuItem
               onClick={handleLogout}
               className="cursor-pointer focus:bg-red-50 focus:text-red-700 text-red-600"
             >

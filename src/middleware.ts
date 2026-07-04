@@ -1,0 +1,87 @@
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+import { loginRateLimit } from './lib/rate-limit'
+
+type AllowedMethod = 'POST'
+
+// Endpoints de auth protegidos por rate limiting.
+const RATE_LIMITED_ENDPOINTS = {
+  '/api/auth/sign-in/email': ['POST'], // incrementa intentos
+  '/api/auth/forgot-password': ['POST'], // solo verifica bloqueo
+  '/api/auth/reset-password': ['POST'], // solo verifica bloqueo
+} as const
+
+function sendTooManyRequests(message: string, retryAfter?: number) {
+  const response = NextResponse.json(
+    { error: 'Too Many Requests', message, retryAfter },
+    { status: 429 }
+  )
+  if (retryAfter) response.headers.set('Retry-After', retryAfter.toString())
+  return response
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+  const method = request.method
+
+  const endpointConfig =
+    RATE_LIMITED_ENDPOINTS[pathname as keyof typeof RATE_LIMITED_ENDPOINTS]
+  if (!endpointConfig || !endpointConfig.includes(method as AllowedMethod)) {
+    return NextResponse.next()
+  }
+
+  const ip = getClientIP(request)
+  if (!ip) return NextResponse.next()
+
+  try {
+    // Login incrementa el contador; el resto solo consulta el estado.
+    const rateLimitResult =
+      pathname === '/api/auth/sign-in/email' && method === 'POST'
+        ? await loginRateLimit.incrementAttempt(ip)
+        : await loginRateLimit.getRemaining(ip)
+
+    if (rateLimitResult.isBlocked) {
+      return sendTooManyRequests(
+        `IP temporalmente bloqueada. Intenta nuevamente en ${rateLimitResult.retryAfter} segundos.`,
+        rateLimitResult.retryAfter
+      )
+    }
+
+    const response = NextResponse.next()
+    response.headers.set('X-RateLimit-Limit', '10')
+    response.headers.set('X-RateLimit-Remaining', rateLimitResult.remaining.toString())
+    response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString())
+    return response
+  } catch (error) {
+    // Ante un error de rate limiting, permitir el acceso (fail-open).
+    console.error('Error en rate limiting:', error)
+    return NextResponse.next()
+  }
+}
+
+function getClientIP(request: NextRequest): string | null {
+  try {
+    const forwarded = request.headers.get('x-forwarded-for')
+    const realIP = request.headers.get('x-real-ip')
+    const cfConnectingIP = request.headers.get('cf-connecting-ip')
+
+    if (forwarded) {
+      const ips = forwarded.split(',').map((ip: string) => ip.trim())
+      return ips[0] || null
+    }
+    if (cfConnectingIP) return cfConnectingIP
+    if (realIP) return realIP
+
+    return process.env.NODE_ENV === 'development' ? '127.0.0.1' : null
+  } catch {
+    return null
+  }
+}
+
+export const config = {
+  matcher: [
+    '/api/auth/sign-in/email',
+    '/api/auth/forgot-password',
+    '/api/auth/reset-password',
+  ],
+}
