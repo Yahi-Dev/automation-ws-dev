@@ -96,10 +96,20 @@ export async function POST(req: NextRequest) {
     // Cumplimiento: nunca enviar a opted-out; opcionalmente exigir opt-in explícito.
     const requireOptIn = cfg.requireOptIn;
 
-    // TODO (M4): cuando TwilioContentTemplate persista `approvalStatus`, bloquear el
-    // envío de plantillas de marketing que no estén 'approved'. Ej.:
-    //   if (contentSid && post.contentTemplate?.approvalStatus !== 'approved')
-    //     return HttpResponse.sendBadRequest('La plantilla no está aprobada por WhatsApp');
+    // Gate de plantilla: no enviar plantillas rechazadas, ni marketing sin aprobar.
+    const template = post.contentTemplate;
+    if (template) {
+      if (template.approvalStatus === "rejected") {
+        return HttpResponse.sendBadRequest(
+          "La plantilla fue rechazada por WhatsApp; no se puede usar para enviar."
+        );
+      }
+      if (template.category === "MARKETING" && template.approvalStatus !== "approved") {
+        return HttpResponse.sendBadRequest(
+          "La plantilla de marketing no está aprobada por WhatsApp todavía."
+        );
+      }
+    }
 
     let sent = 0;
     let failed = 0;

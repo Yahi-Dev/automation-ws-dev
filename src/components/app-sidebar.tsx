@@ -9,6 +9,7 @@ import {
   IconCalendarWeekFilled,
   IconDashboard,
   IconSettings,
+  IconTemplate,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/src/components/nav-main"
@@ -42,6 +43,7 @@ const data = {
     { title: "Posts", url: "/posts", icon: IconBrowserShare },
     { title: "Calendario", url: "/posts/calendar", icon: IconCalendarWeekFilled },
     { title: "Mensajes", url: "/messages", icon: IconBrandTelegram },
+    { title: "Plantillas", url: "/plantillas", icon: IconTemplate },
     { title: "Configuración", url: "/configuracion", icon: IconSettings },
   ],
 }

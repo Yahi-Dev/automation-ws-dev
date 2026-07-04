@@ -229,6 +229,11 @@ model TwilioContentTemplate {
   types        Json     // { "twilio/text": { body: "..."} }
   variables    Json     // { "1": "Cliente" }
 
+  // Estado de aprobación de WhatsApp (persistido para consultarlo/gate de envío)
+  approvalStatus  String? @db.VarChar(16) // received | pending | approved | rejected
+  category        String? @db.VarChar(16) // UTILITY | MARKETING | AUTHENTICATION
+  rejectionReason String? @db.Text
+
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
