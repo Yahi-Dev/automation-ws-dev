@@ -10,6 +10,7 @@ import {
   IconDashboard,
   IconSettings,
   IconTemplate,
+  IconUsers,
 } from "@tabler/icons-react"
 
 import { NavMain } from "@/src/components/nav-main"
@@ -48,12 +49,17 @@ const data = {
   ],
 }
 
-type AppSidebarUser = { name: string; email: string; avatar: string }
+type AppSidebarUser = { name: string; email: string; avatar: string; role?: string }
 
 export function AppSidebar({
   user,
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: AppSidebarUser }) {
+  const navMain =
+    user.role === "admin"
+      ? [...data.navMain, { title: "Usuarios", url: "/usuarios", icon: IconUsers }]
+      : data.navMain;
+
   return (
     <Sidebar
       collapsible="offcanvas"
@@ -84,7 +90,7 @@ export function AppSidebar({
       </SidebarHeader>
       <FieldSeparator />
       <SidebarContent className="px-3 py-4">
-        <NavMain items={data.navMain} />
+        <NavMain items={navMain} />
       </SidebarContent>
       <SidebarFooter className="border-t border-gray-100 px-3 py-4">
         <NavUser user={user} />

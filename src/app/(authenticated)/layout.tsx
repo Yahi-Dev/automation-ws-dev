@@ -3,26 +3,19 @@ import { AppSidebar } from "@/src/components/app-sidebar";
 import { SiteHeader } from "@/src/components/site-header";
 import { SidebarInset, SidebarProvider } from "@/src/components/ui/sidebar";
 import { auth } from "@/src/lib/auth";
-import redis from "@/src/lib/redis";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import type React from "react";
 
 export default async function AuthenticatedLayout({children,}: {children: React.ReactNode}) {
-  // 1) Sesión server-side (manteniendo tu forma con headers())
+  // Sesión server-side
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session?.user?.id) redirect("/login");
 
-  // 3) (Opcional) Refrescar caché para el middleware (edge)
-  // Si better-auth expone el token de sesión, lo cacheamos.
-  const token = session.session?.token as string | undefined;
-  if (token) {
-    // Cachea el estado de sesión para el middleware (TTL largo, se renueva en cada visita).
-    // El cliente `redis` es resiliente: si Upstash no está disponible, no falla.
-    await redis.set(`sess_status:${token}`, "approved", { ex: 60 * 60 * 24 * 30 });
-  }
+  // Gate de aprobación: solo usuarios aprobados entran.
+  const status = (session.user as { status?: string }).status;
+  if (status && status !== "approved") redirect("/login?pending=1");
 
-  // 4) Tu layout original intacto
   return (
     <SidebarProvider
       style={
@@ -38,6 +31,7 @@ export default async function AuthenticatedLayout({children,}: {children: React.
           name: session.user.name ?? "",
           email: session.user.email ?? "",
           avatar: session.user.image ?? "",
+          role: (session.user as { role?: string }).role ?? "user",
         }}
       />
       <SidebarInset>

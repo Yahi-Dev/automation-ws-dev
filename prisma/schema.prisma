@@ -21,6 +21,8 @@ model User {
   is_deleted        Boolean   @default(false)
   temporaryPassword Boolean   @default(true)
   isNew             Boolean   @default(true)
+  status            String    @default("pending") @db.VarChar(16) // pending | approved | rejected
+  role              String    @default("user") @db.VarChar(16)    // user | admin
   loginCount        Int?      @default(0)
   lastLogin         String?   @db.Text
   createdAt         DateTime  @default(now())

@@ -23,6 +23,8 @@ export const auth = betterAuth({
       emailVerified: { type: "boolean", input: false, defaultValue: false },
       temporaryPassword: { type: "boolean", input: false, defaultValue: true },
       isNew: { type: "boolean", input: false, defaultValue: true },
+      status: { type: "string", input: false, defaultValue: "pending" },
+      role: { type: "string", input: false, defaultValue: "user" },
     },
   },
 

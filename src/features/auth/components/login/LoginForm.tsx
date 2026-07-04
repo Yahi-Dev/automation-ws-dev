@@ -53,6 +53,11 @@ export function LoginInner() {
           "Tu solicitud de registro ha sido enviada. Recibirás un correo electrónico cuando sea aprobada o rechazada por el equipo.",
       });
     }
+    if (sp.get("pending") === "1") {
+      toast.warning("Cuenta pendiente de aprobación", {
+        description: "Un administrador debe aprobar tu cuenta antes de que puedas ingresar.",
+      });
+    }
   }, [sp]);
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
