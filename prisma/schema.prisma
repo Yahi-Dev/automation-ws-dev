@@ -82,7 +82,14 @@ model contacts {
   id        Int      @id @default(autoincrement())
   name      String   @db.Text
   phone     String   @db.Text
-  whatsapp  Boolean  @default(false)
+  whatsapp  Boolean  @default(false) // "alcanzable" por WhatsApp, NO es consentimiento
+
+  // Consentimiento (opt-in/opt-out) — requerido para cumplimiento legal
+  consentState  String    @default("unknown") @db.VarChar(16) // opted_in | opted_out | unknown
+  consentSource String?   @db.VarChar(32) // manual | import | inbound | api
+  consentAt     DateTime?
+  optOutAt      DateTime?
+  optOutKeyword String?   @db.VarChar(32)
 
   createdBy String
   createdAt DateTime @default(now())
@@ -90,8 +97,27 @@ model contacts {
   updatedAt DateTime? @default(now()) @updatedAt
   isDeleted Boolean  @default(false)
 
-  messages  message[]
+  messages      message[]
+  consentEvents consentEvents[]
+
+  @@index([consentState])
   @@map("contacts")
+}
+
+model consentEvents {
+  id        Int      @id @default(autoincrement())
+  contactId Int
+  event     String   @db.VarChar(16) // opt_in | opt_out
+  source    String?  @db.VarChar(32) // inbound | manual | import | api
+  keyword   String?  @db.VarChar(64)
+  raw       String?  @db.Text
+  createdBy String?
+  createdAt DateTime @default(now())
+
+  contact   contacts @relation(fields: [contactId], references: [id], onDelete: Cascade)
+
+  @@index([contactId])
+  @@map("consent_events")
 }
 
 

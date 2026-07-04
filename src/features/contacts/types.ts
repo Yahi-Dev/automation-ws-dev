@@ -1,4 +1,6 @@
 // Tipos para contacts
+export type ConsentState = "opted_in" | "opted_out" | "unknown";
+
 export interface ContactsType {
   id: number;
   name: string;
@@ -8,6 +10,11 @@ export interface ContactsType {
   updatedAt: Date | null;
   updatedBy: string | null;
   whatsapp: boolean;
+  consentState: ConsentState;
+  consentSource?: string | null;
+  consentAt?: Date | null;
+  optOutAt?: Date | null;
+  optOutKeyword?: string | null;
   isDeleted: boolean;
   _count?: {
     messages: number;

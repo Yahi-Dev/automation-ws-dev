@@ -74,7 +74,9 @@ export async function POST(req: NextRequest) {
       prisma.message.findMany({
         where: { postId, isDeleted: false, status: { in: statusFilter } },
         include: {
-          contact: { select: { id: true, name: true, phone: true, whatsapp: true } },
+          contact: {
+            select: { id: true, name: true, phone: true, whatsapp: true, consentState: true },
+          },
         },
         orderBy: { id: "asc" },
       })
@@ -89,6 +91,8 @@ export async function POST(req: NextRequest) {
     const statusCallback = getStatusCallbackUrl();
     const contentSid = post.contentTemplate?.sid;
     const actor = session.user.email ?? "system";
+    // Cumplimiento: nunca enviar a opted-out; opcionalmente exigir opt-in explícito.
+    const requireOptIn = process.env.WHATSAPP_REQUIRE_OPT_IN === "true";
 
     // TODO (M4): cuando TwilioContentTemplate persista `approvalStatus`, bloquear el
     // envío de plantillas de marketing que no estén 'approved'. Ej.:
@@ -102,6 +106,45 @@ export async function POST(req: NextRequest) {
     for (let i = 0; i < pending.length; i++) {
       const msg = pending[i];
       const phone = msg.contact?.phone ?? "";
+      const consentState = msg.contact?.consentState ?? "unknown";
+
+      // Gate de consentimiento: nunca enviar a quien hizo opt-out
+      if (consentState === "opted_out") {
+        failed++;
+        await prisma.message
+          .update({
+            where: { id: msg.id },
+            data: {
+              status: "failed",
+              errorCode: "CONSENT_OPT_OUT",
+              errorMessage: "El contacto se dio de baja (opt-out)",
+              updatedBy: actor,
+              updatedAt: new Date(),
+            },
+          })
+          .catch(() => {});
+        results.push({ messageId: msg.id, contactId: msg.contactId, ok: false, error: "CONSENT_OPT_OUT" });
+        continue;
+      }
+
+      // Opcional (marketing): exigir opt-in explícito
+      if (requireOptIn && consentState !== "opted_in") {
+        failed++;
+        await prisma.message
+          .update({
+            where: { id: msg.id },
+            data: {
+              status: "failed",
+              errorCode: "CONSENT_NOT_OPTED_IN",
+              errorMessage: "El contacto no dio opt-in explícito",
+              updatedBy: actor,
+              updatedAt: new Date(),
+            },
+          })
+          .catch(() => {});
+        results.push({ messageId: msg.id, contactId: msg.contactId, ok: false, error: "CONSENT_NOT_OPTED_IN" });
+        continue;
+      }
 
       // Validación previa del número
       if (!phone || !isValidE164(phone)) {

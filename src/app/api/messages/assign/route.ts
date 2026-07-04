@@ -36,14 +36,14 @@ export async function POST(req: Request) {
       return HttpResponse.sendNotFound('Post no encontrado');
     }
 
-    // Verificar que los contactos existen
+    // Verificar que los contactos existen (y traer su estado de consentimiento)
     const [existingContacts, contactsError] = await CatchError(
       prisma.contacts.findMany({
-        where: { 
+        where: {
           id: { in: contactIds },
-          isDeleted: false 
+          isDeleted: false
         },
-        select: { id: true }
+        select: { id: true, consentState: true }
       })
     );
 
@@ -58,10 +58,20 @@ export async function POST(req: Request) {
       return HttpResponse.sendBadRequest(`Algunos contactos no existen: ${invalidContactIds.join(', ')}`);
     }
 
-    // Crear los mensajes
+    // Cumplimiento: excluir a los contactos que hicieron opt-out
+    const allowedContactIds = existingContacts
+      .filter(c => c.consentState !== 'opted_out')
+      .map(c => c.id);
+    const optOutSkipped = existingContactIds.length - allowedContactIds.length;
+
+    if (allowedContactIds.length === 0) {
+      return HttpResponse.sendBadRequest('Todos los contactos seleccionados se dieron de baja (opt-out).');
+    }
+
+    // Crear los mensajes solo para los contactos permitidos
     const [createdMessages, createError] = await CatchError(
       prisma.message.createMany({
-        data: contactIds.map(contactId => ({
+        data: allowedContactIds.map(contactId => ({
           postId: postId,
           contactId: contactId,
           status: 'pending',
@@ -77,9 +87,10 @@ export async function POST(req: Request) {
 
     await redis.del(CACHE_KEY);
 
+    const optOutNote = optOutSkipped > 0 ? ` (${optOutSkipped} omitido(s) por opt-out)` : '';
     return HttpResponse.sendCreated(
       { Data: createdMessages },
-      `Mensaje asignado exitosamente a ${contactIds.length} contacto(s)`
+      `Mensaje asignado exitosamente a ${allowedContactIds.length} contacto(s)${optOutNote}`
     );
   } catch (error) {
     console.error("Server error:", error);

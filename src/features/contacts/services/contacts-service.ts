@@ -144,6 +144,28 @@ export async function deleteContact(id: number): Promise<ContactsResponse> {
   }
 }
 
+export async function setContactConsent(
+  id: number,
+  event: "opt_in" | "opt_out"
+): Promise<ContactsResponse> {
+  try {
+    const response = await fetch(`/api/contacts/${id}/consent`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event }),
+    });
+
+    const result = await response.json();
+    if (!response.ok || !result.success) {
+      throw new Error(result.message || "Error al actualizar el consentimiento");
+    }
+    return result;
+  } catch (error) {
+    console.error("Error al actualizar el consentimiento:", error);
+    throw error;
+  }
+}
+
 export async function checkWhatsApp(phone: string) {
   console.log("Checking WhatsApp for phone:", phone);
   const res = await fetch("/api/whatsapp/check", {

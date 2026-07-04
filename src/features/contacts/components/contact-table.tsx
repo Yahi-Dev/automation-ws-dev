@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { DataTable } from "@/src/components/data-table"
 import { Button } from "@/src/components/ui/button"
 import Image from "next/image"
-import { MoreHorizontal, Edit, Trash2 } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Ban, CheckCircle2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +18,8 @@ import { ColumnDef } from "@tanstack/react-table"
 import { ContactsType, NameCellProps } from '../types';
 import { DeleteConfirmationModal } from "@/src/components/ui/delete"
 import { Skeleton } from "@/src/components/ui/skeleton"
-import { useDeleteContact, useGetAllContacts } from "../hooks/use-contact"
+import { Badge } from "@/src/components/ui/badge"
+import { useDeleteContact, useGetAllContacts, useSetConsent } from "../hooks/use-contact"
 
 const TableSkeleton = ({ cols, rows = 8 }: { cols: number; rows?: number }) => (
   <div className="space-y-3">
@@ -68,6 +69,12 @@ export default function ContactsTable() {
   const [primaryLoading, setPrimaryLoading] = useState(true)
   const { fetchAll, contacts, isLoading = false } = useGetAllContacts()
   const { remove: handleDelete } = useDeleteContact()
+  const { setConsent } = useSetConsent()
+
+  const handleConsent = async (id: number, event: "opt_in" | "opt_out") => {
+    await setConsent(id, event)
+    await fetchAll()
+  }
 
   const [currentContactId, setCurrentContactId] = useState<number | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
@@ -128,6 +135,18 @@ export default function ContactsTable() {
       },
     },
     {
+      accessorKey: "consentState",
+      header: "Consentimiento",
+      cell: ({ row }) => {
+        const state = row.getValue("consentState") as string
+        if (state === "opted_in")
+          return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Suscrito</Badge>
+        if (state === "opted_out")
+          return <Badge variant="destructive">Baja</Badge>
+        return <Badge variant="outline">Desconocido</Badge>
+      },
+    },
+    {
       accessorKey: "createdAt",
       header: "Fecha de creación",
       cell: ({ row }) => {
@@ -168,6 +187,19 @@ export default function ContactsTable() {
                   <Edit className="mr-2 h-4 w-4" />
                   Editar
                 </DropdownMenuItem>
+                {contact.consentState !== "opted_in" && (
+                  <DropdownMenuItem onClick={() => handleConsent(contact.id, "opt_in")}>
+                    <CheckCircle2 className="mr-2 h-4 w-4 text-emerald-600" />
+                    Suscribir (opt-in)
+                  </DropdownMenuItem>
+                )}
+                {contact.consentState !== "opted_out" && (
+                  <DropdownMenuItem onClick={() => handleConsent(contact.id, "opt_out")}>
+                    <Ban className="mr-2 h-4 w-4 text-amber-600" />
+                    Dar de baja (opt-out)
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuSeparator />
                 <DropdownMenuItem
                   disabled={typeof contact?._count?.messages === "number" && contact._count.messages > 0}
                   onSelect={(e) => e.preventDefault()}

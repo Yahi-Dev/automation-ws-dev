@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ContactsType } from "../types";
 import { ContactsResponse, createContact, deleteContact, getAllContacts,
-  getContactById, updateContact } from "../services/contacts-service";
+  getContactById, updateContact, setContactConsent } from "../services/contacts-service";
 import { ContactFormValues } from "../schema/validations";
 
 export function useGetAllContacts() {
@@ -194,3 +194,33 @@ export function useUpdateContact(id: number) {
 
   return { update, isLoading, error, clearError };
 };
+
+export function useSetConsent() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const setConsent = async (
+    id: number,
+    event: "opt_in" | "opt_out"
+  ): Promise<ContactsResponse | null> => {
+    setIsLoading(true);
+    try {
+      const response = await setContactConsent(id, event);
+      if (response.success) {
+        toast.success(
+          event === "opt_out" ? "Contacto dado de baja" : "Contacto suscrito",
+          { description: response.message }
+        );
+        return response;
+      }
+      throw new Error(response.message || "Error al actualizar el consentimiento");
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("Error al actualizar el consentimiento", { description: errorMessage });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { setConsent, isLoading };
+}
