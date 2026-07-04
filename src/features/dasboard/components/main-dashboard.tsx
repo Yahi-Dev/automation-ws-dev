@@ -10,12 +10,10 @@ import {
   Tooltip,
   Legend,
   ResponsiveContainer,
-  AreaChart,
-  Area,
 } from "recharts"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
 import { Button } from "@/src/components/ui/button"
-import { Plus, Send, Users, Clock, MessageCircle, RefreshCw } from "lucide-react"
+import { Plus, Send, MessageCircle, RefreshCw, CheckCheck, Eye } from "lucide-react"
 import { StatsCard } from "@/src/components/shared/stats-card"
 import { ContactsList } from "./contacts-list"
 import { SchedulePanel } from "./schedule-panel"
@@ -100,29 +98,25 @@ export function MainDashboard() {
           </>
         ) : (
           <>
-            <StatsCard 
-              title="Mensajes Enviados" 
-              value={data?.stats.messagesSent.toLocaleString() || "0"} 
-              change={data?.stats.changes.messagesSent || "+0%"} 
-              icon={<Send className="text-emerald-600" />} 
+            <StatsCard
+              title="Mensajes Enviados"
+              value={(data?.stats.messagesSent ?? 0).toLocaleString()}
+              icon={<Send className="text-emerald-600" />}
             />
-            <StatsCard 
-              title="Contactos Activos" 
-              value={data?.stats.activeContacts.toLocaleString() || "0"} 
-              change={data?.stats.changes.activeContacts || "+0%"} 
-              icon={<Users className="text-emerald-600" />} 
+            <StatsCard
+              title="Entregados"
+              value={(data?.stats.delivered ?? 0).toLocaleString()}
+              icon={<CheckCheck className="text-emerald-600" />}
             />
-            <StatsCard 
-              title="Mensajes Pendientes" 
-              value={data?.stats.pendingMessages.toLocaleString() || "0"} 
-              change={data?.stats.changes.pendingMessages || "+0%"} 
-              icon={<Clock className="text-amber-500" />} 
+            <StatsCard
+              title="Leídos"
+              value={(data?.stats.read ?? 0).toLocaleString()}
+              icon={<Eye className="text-sky-600" />}
             />
-            <StatsCard 
-              title="Tasa de Entrega" 
-              value={`${data?.stats.deliveryRate.toFixed(1)}%` || "0%"} 
-              change={data?.stats.changes.deliveryRate || "+0%"} 
-              icon={<MessageCircle className="text-emerald-600" />} 
+            <StatsCard
+              title="Fallidos"
+              value={(data?.stats.failed ?? 0).toLocaleString()}
+              icon={<MessageCircle className="text-rose-500" />}
             />
           </>
         )}
@@ -163,18 +157,9 @@ export function MainDashboard() {
                     }}
                   />
                   <Legend />
-                  <Bar 
-                    dataKey="enviados" 
-                    fill="#10b981" 
-                    radius={[4, 4, 0, 0]}
-                    name="Mensajes Enviados"
-                  />
-                  <Bar 
-                    dataKey="pendientes" 
-                    fill="#f59e0b" 
-                    radius={[4, 4, 0, 0]}
-                    name="Mensajes Pendientes"
-                  />
+                  <Bar dataKey="enviados" fill="#10b981" radius={[4, 4, 0, 0]} name="Enviados" />
+                  <Bar dataKey="fallidos" fill="#ef4444" radius={[4, 4, 0, 0]} name="Fallidos" />
+                  <Bar dataKey="pendientes" fill="#f59e0b" radius={[4, 4, 0, 0]} name="Pendientes" />
                 </BarChart>
               </ResponsiveContainer>
             )}
@@ -187,11 +172,11 @@ export function MainDashboard() {
 
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Timeline */}
+        {/* Distribución por estado */}
         <Card className="border-emerald-200/30">
           <CardHeader>
-            <CardTitle className="text-gray-900">Mejor Horario para Enviar</CardTitle>
-            <CardDescription>Actividad promedio por hora del día</CardDescription>
+            <CardTitle className="text-gray-900">Distribución por estado</CardTitle>
+            <CardDescription>Total de mensajes por estado de entrega</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -200,17 +185,10 @@ export function MainDashboard() {
               </div>
             ) : (
               <ResponsiveContainer width="100%" height={250}>
-                <AreaChart data={data?.scheduleActivity || []}>
+                <BarChart data={data?.statusBreakdown || []} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
-                  <XAxis 
-                    dataKey="hora" 
-                    stroke="#6b7280"
-                    fontSize={12}
-                  />
-                  <YAxis 
-                    stroke="#6b7280"
-                    fontSize={12}
-                  />
+                  <XAxis type="number" stroke="#6b7280" fontSize={12} allowDecimals={false} />
+                  <YAxis type="category" dataKey="name" stroke="#6b7280" fontSize={12} width={90} />
                   <Tooltip
                     contentStyle={{
                       backgroundColor: "white",
@@ -219,21 +197,8 @@ export function MainDashboard() {
                       boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                     }}
                   />
-                  <Area
-                    type="monotone"
-                    dataKey="actividad"
-                    fill="url(#colorActivity)"
-                    stroke="#10b981"
-                    fillOpacity={0.3}
-                    strokeWidth={2}
-                  />
-                  <defs>
-                    <linearGradient id="colorActivity" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#10b981" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#10b981" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                </AreaChart>
+                  <Bar dataKey="value" fill="#10b981" radius={[0, 4, 4, 0]} name="Mensajes" />
+                </BarChart>
               </ResponsiveContainer>
             )}
           </CardContent>

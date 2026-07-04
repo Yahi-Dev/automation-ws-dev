@@ -2,7 +2,7 @@
 import { messageCreateSchema, messageUpdateSchema } from "@/src/features/messages/schema/validations"
 import { auth } from "@/src/lib/auth"
 import prisma from "@/src/lib/prisma"
-import { getOrSetCache, redis } from "@/src/lib/redis"
+import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
 import { HttpResponse } from "@/src/utils/httpResponse"
 import { Prisma } from "@prisma/client"
@@ -12,6 +12,9 @@ const CACHE_KEY = "messages-cache";
 
 export async function GET(req: Request) {
   try {
+    const session = await auth.api.getSession({ headers: req.headers });
+    if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search')?.trim() || ''
     const status = searchParams.get('status')?.trim()
@@ -63,14 +66,11 @@ export async function GET(req: Request) {
       return HttpResponse.sendServerError('Error al obtener los mensajes', error);
     }
 
-    const data = await getOrSetCache(CACHE_KEY, async () => {
-      return messages ?? [];
-    });
-
+    // Nota: no se cachea el listado porque varía por filtros (search/status/postId).
     return HttpResponse.sendSuccess(
       {
-        Data: data ?? [],
-        Total: data?.length ?? 0
+        Data: messages ?? [],
+        Total: messages?.length ?? 0
       },
       'Mensajes obtenidos exitosamente'
     );

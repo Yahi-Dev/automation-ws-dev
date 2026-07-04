@@ -30,11 +30,12 @@ export default function MessagesTable() {
 
   const [currentMessageId, setCurrentMessageId] = useState<number | null>(null)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [status, setStatus] = useState<string>("")
 
   useEffect(() => {
-    fetchAll()
+    fetchAll(status ? { status } : undefined)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [status])
 
   const handleDeleteClick = (id: number) => {
     setCurrentMessageId(id)
@@ -261,9 +262,29 @@ export default function MessagesTable() {
 
   return (
     <div className="container mx-auto py-5 px-5">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold">Gestión de Mensajes</h1>
         <p className="text-muted-foreground">Administra los mensajes asignados a contactos</p>
+      </div>
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[
+          { key: "", label: "Todos" },
+          { key: "pending", label: "Pendientes" },
+          { key: "sent", label: "Enviados" },
+          { key: "delivered", label: "Entregados" },
+          { key: "read", label: "Leídos" },
+          { key: "failed", label: "Fallidos" },
+        ].map((f) => (
+          <Button
+            key={f.key || "all"}
+            variant={status === f.key ? "default" : "outline"}
+            size="sm"
+            onClick={() => setStatus(f.key)}
+          >
+            {f.label}
+          </Button>
+        ))}
       </div>
 
       {isLoading ? (

@@ -70,7 +70,7 @@ export function ContactsList() {
                           : "bg-gray-100 text-gray-600 hover:bg-gray-200 border-gray-200"
                         }`}
                       >
-                        {contact.status}
+                        {contact.status === "activo" ? "Suscrito" : contact.status === "baja" ? "Baja" : "Sin consentimiento"}
                       </Badge>
                     </div>
                     <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">

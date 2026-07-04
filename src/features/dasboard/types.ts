@@ -1,32 +1,31 @@
 export interface DashboardStats {
   messagesSent: number;
-  activeContacts: number;
+  delivered: number;
+  read: number;
+  failed: number;
   pendingMessages: number;
+  activeContacts: number;
   deliveryRate: number;
-  changes: {
-    messagesSent: string;
-    activeContacts: string;
-    pendingMessages: string;
-    deliveryRate: string;
-  };
+  readRate: number;
 }
 
 export interface MessageActivity {
   date: string;
   enviados: number;
+  fallidos: number;
   pendientes: number;
 }
 
-export interface ScheduleActivity {
-  hora: string;
-  actividad: number;
+export interface StatusBreakdown {
+  name: string;
+  value: number;
 }
 
 export interface RecentContact {
   id: number;
   name: string;
   phone: string;
-  status: 'activo' | 'pausado';
+  status: string;
   lastMessage: string;
 }
 
@@ -42,7 +41,7 @@ export interface ScheduledMessage {
 export interface DashboardData {
   stats: DashboardStats;
   messageActivity: MessageActivity[];
-  scheduleActivity: ScheduleActivity[];
+  statusBreakdown: StatusBreakdown[];
   recentContacts: RecentContact[];
   scheduledMessages: ScheduledMessage[];
 }
