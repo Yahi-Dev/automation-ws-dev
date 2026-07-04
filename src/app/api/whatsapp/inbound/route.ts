@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { redis } from "@/src/lib/redis";
 import { detectConsentKeyword, findContactByPhone, applyConsent } from "@/src/lib/consent";
+import { getTwilioConfig } from "@/src/lib/app-config";
 
 export const runtime = "nodejs";
 
@@ -31,10 +32,10 @@ function escapeXml(s: string): string {
 export async function POST(req: NextRequest) {
   try {
     // Protección opcional por secreto compartido (?token=...)
-    const secret = process.env.WHATSAPP_WEBHOOK_SECRET;
-    if (secret) {
+    const { webhookSecret } = await getTwilioConfig();
+    if (webhookSecret) {
       const token = req.nextUrl.searchParams.get("token");
-      if (token !== secret) return new NextResponse("Forbidden", { status: 403 });
+      if (token !== webhookSecret) return new NextResponse("Forbidden", { status: 403 });
     }
 
     const form = await req.formData();

@@ -1,6 +1,7 @@
 // src/lib/whatsapp.ts
 // Helper central para el envío de mensajes de WhatsApp vía Twilio.
-import { getTwilioClient } from "./twilio";
+import { getTwilioClientFromConfig } from "./twilio";
+import { getTwilioConfig } from "./app-config";
 
 export type SendWhatsAppParams = {
   /** Teléfono destino en E.164 (con o sin prefijo "whatsapp:"). */
@@ -46,11 +47,9 @@ export function isValidE164(phone: string): boolean {
  * WHATSAPP_WEBHOOK_BASE_URL) con una URL pública (ngrok, dominio, etc.) para
  * que los estados delivered/read/failed se actualicen automáticamente.
  */
-export function getStatusCallbackUrl(): string | undefined {
-  const base =
-    process.env.TWILIO_STATUS_CALLBACK_URL ||
-    process.env.WHATSAPP_WEBHOOK_BASE_URL ||
-    "";
+export async function getStatusCallbackUrl(): Promise<string | undefined> {
+  const cfg = await getTwilioConfig();
+  const base = process.env.TWILIO_STATUS_CALLBACK_URL || cfg.webhookBaseUrl || "";
   if (!base) return undefined;
 
   let url = base.includes("/api/whatsapp/webhook")
@@ -58,7 +57,7 @@ export function getStatusCallbackUrl(): string | undefined {
     : `${base.replace(/\/$/, "")}/api/whatsapp/webhook`;
 
   // Secreto compartido opcional para proteger el webhook
-  const secret = process.env.WHATSAPP_WEBHOOK_SECRET;
+  const secret = cfg.webhookSecret;
   if (secret && !url.includes("token=")) {
     url += `${url.includes("?") ? "&" : "?"}token=${encodeURIComponent(secret)}`;
   }
@@ -68,13 +67,14 @@ export function getStatusCallbackUrl(): string | undefined {
 /** Envía un único mensaje de WhatsApp vía Twilio. */
 export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
   const { to, body, contentSid, contentVariables, statusCallback } = params;
-  const client = getTwilioClient();
+  const cfg = await getTwilioConfig();
+  const client = await getTwilioClientFromConfig();
 
-  // Sender de WhatsApp: preferir el sender aprobado (producción); si no, el sandbox.
-  const rawFrom = process.env.TWILIO_WHATSAPP_FROM || process.env.TWILIO_PHONE_NUMBER;
+  // Sender de WhatsApp resuelto desde la config (Configuración o .env).
+  const rawFrom = cfg.whatsappFrom;
   if (!rawFrom) {
     throw new Error(
-      "Sender de WhatsApp no configurado (define TWILIO_WHATSAPP_FROM o TWILIO_PHONE_NUMBER)"
+      "Sender de WhatsApp no configurado (configúralo en Configuración o define TWILIO_WHATSAPP_FROM)"
     );
   }
   const from = toWhatsAppAddress(rawFrom);

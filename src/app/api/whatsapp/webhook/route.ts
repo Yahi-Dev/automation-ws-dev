@@ -5,6 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/src/lib/prisma";
 import { redis } from "@/src/lib/redis";
 import { mapTwilioStatus, statusRank } from "@/src/lib/whatsapp";
+import { getTwilioConfig } from "@/src/lib/app-config";
 
 export const runtime = "nodejs";
 
@@ -13,10 +14,10 @@ const MESSAGES_CACHE_KEY = "messages-cache";
 export async function POST(req: NextRequest) {
   try {
     // Protección opcional por secreto compartido (?token=...)
-    const secret = process.env.WHATSAPP_WEBHOOK_SECRET;
-    if (secret) {
+    const { webhookSecret } = await getTwilioConfig();
+    if (webhookSecret) {
       const token = req.nextUrl.searchParams.get("token");
-      if (token !== secret) {
+      if (token !== webhookSecret) {
         return new NextResponse("Forbidden", { status: 403 });
       }
     }

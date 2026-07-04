@@ -105,6 +105,32 @@ model contacts {
   @@map("contacts")
 }
 
+model appSettings {
+  id                    String   @id @default("singleton")
+
+  // Twilio (los secretos se guardan cifrados)
+  twilioAccountSid      String?
+  twilioAuthTokenEnc    String?  @db.Text
+  twilioApiKeySid       String?
+  twilioApiKeySecretEnc String?  @db.Text
+  whatsappFrom          String?
+  messagingServiceSid   String?
+  contentBaseUrl        String?
+  templateLanguage      String?  @db.VarChar(16)
+
+  // Preferencias de envío
+  batchSize             Int?
+  delayMs               Int?
+  webhookBaseUrl        String?
+  webhookSecretEnc      String?  @db.Text
+  requireOptIn          Boolean  @default(false)
+
+  updatedAt             DateTime @updatedAt
+  updatedBy             String?
+
+  @@map("app_settings")
+}
+
 model consentEvents {
   id        Int      @id @default(autoincrement())
   contactId Int

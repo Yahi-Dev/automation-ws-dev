@@ -11,6 +11,7 @@ import {
   isValidE164,
   getStatusCallbackUrl,
 } from "@/src/lib/whatsapp";
+import { getTwilioConfig } from "@/src/lib/app-config";
 
 export const runtime = "nodejs";
 // El envío en lote puede tardar; ampliamos el tiempo máximo de ejecución.
@@ -50,9 +51,10 @@ export async function POST(req: NextRequest) {
       return HttpResponse.sendBadRequest("postId inválido");
     }
 
-    // Control de velocidad / lotes (configurable por request o por entorno)
-    const batchSize = Math.max(1, Number(body?.batchSize ?? process.env.WHATSAPP_BATCH_SIZE ?? 10));
-    const delayMs = Math.max(0, Number(body?.delayMs ?? process.env.WHATSAPP_SEND_DELAY_MS ?? 1000));
+    // Control de velocidad / lotes (configurable por request, DB o entorno)
+    const cfg = await getTwilioConfig();
+    const batchSize = Math.max(1, Number(body?.batchSize ?? cfg.batchSize));
+    const delayMs = Math.max(0, Number(body?.delayMs ?? cfg.delayMs));
     const includeSent = Boolean(body?.includeSent);
 
     // 1) Cargar post + su template (si tiene)
@@ -88,11 +90,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const statusCallback = getStatusCallbackUrl();
+    const statusCallback = await getStatusCallbackUrl();
     const contentSid = post.contentTemplate?.sid;
     const actor = session.user.email ?? "system";
     // Cumplimiento: nunca enviar a opted-out; opcionalmente exigir opt-in explícito.
-    const requireOptIn = process.env.WHATSAPP_REQUIRE_OPT_IN === "true";
+    const requireOptIn = cfg.requireOptIn;
 
     // TODO (M4): cuando TwilioContentTemplate persista `approvalStatus`, bloquear el
     // envío de plantillas de marketing que no estén 'approved'. Ej.:
