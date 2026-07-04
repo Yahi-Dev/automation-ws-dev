@@ -137,7 +137,7 @@ export default function ContactsTable() {
       header: "WhatsApp",
       cell: ({ row }) => {
         const whatsapp = row.getValue("whatsapp") as boolean
-        const phone = row.getValue("phone") as boolean
+        const phone = row.getValue("phone") as string
         const msg = `Hola 👋\nSoy Ever Burgos.\nCódigo: 123456\n¿Me confirmas?`;
         const url = `https://wa.me/${phone}?text=${encodeURIComponent(msg)}`;
         return (

@@ -244,8 +244,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const [_, deleteError] = await CatchError(
-      prisma.contacts.delete({ where: { id } })
+    // Soft-delete: marca isDeleted en vez de borrar físicamente (preserva historial).
+    const [, deleteError] = await CatchError(
+      prisma.contacts.update({ where: { id }, data: { isDeleted: true } })
     );
 
     if (deleteError) {
