@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { ContactsType } from "../types";
 import { ContactsResponse, createContact, deleteContact, getAllContacts,
-  getContactById, updateContact, setContactConsent } from "../services/contacts-service";
+  getContactById, updateContact, setContactConsent, importContacts } from "../services/contacts-service";
 import { ContactFormValues } from "../schema/validations";
 
 export function useGetAllContacts() {
@@ -194,6 +194,32 @@ export function useUpdateContact(id: number) {
 
   return { update, isLoading, error, clearError };
 };
+
+export function useImportContacts() {
+  const [isLoading, setIsLoading] = useState(false);
+
+  const importFile = async (file: File): Promise<boolean> => {
+    setIsLoading(true);
+    try {
+      const response = await importContacts(file);
+      const d = response.data;
+      toast.success("Importación completada", {
+        description: d
+          ? `${d.imported} importado(s), ${d.skipped} omitido(s).`
+          : response.message,
+      });
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("Error al importar contactos", { description: errorMessage });
+      return false;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  return { importFile, isLoading };
+}
 
 export function useSetConsent() {
   const [isLoading, setIsLoading] = useState(false);

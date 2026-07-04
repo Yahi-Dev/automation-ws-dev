@@ -23,6 +23,7 @@ export function CreateContactForm({ countries }: Readonly<Props>) {
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    country: "",
   })
 
   const [errors, setErrors] = useState<Partial<typeof formData>>({})
@@ -100,10 +101,11 @@ export function CreateContactForm({ countries }: Readonly<Props>) {
     const payload = {
       ...formData,
       name: formData.name.replaceAll(/\s+/g, " ").trim(),
+      country: formData.country || undefined,
     }
     const result = await create(payload)
     if (result?.success) {
-      setFormData({ name: "", phone: "" })
+      setFormData({ name: "", phone: "", country: "" })
     }
   }
 
@@ -161,6 +163,7 @@ export function CreateContactForm({ countries }: Readonly<Props>) {
                 value={formData.phone}
                 countries={countries}
                 onChange={handlePhoneChange}
+                onCountryChange={(c) => setField("country", c ?? "")}
                 placeholder="Ingresa un número de teléfono"
               />
 

@@ -82,6 +82,7 @@ model contacts {
   id        Int      @id @default(autoincrement())
   name      String   @db.Text
   phone     String   @db.Text
+  country   String?  @db.VarChar(2) // ISO 3166-1 alpha-2 (ej: DO, US, MX)
   whatsapp  Boolean  @default(false) // "alcanzable" por WhatsApp, NO es consentimiento
 
   // Consentimiento (opt-in/opt-out) — requerido para cumplimiento legal

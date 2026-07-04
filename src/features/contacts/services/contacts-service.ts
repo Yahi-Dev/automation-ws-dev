@@ -166,19 +166,36 @@ export async function setContactConsent(
   }
 }
 
-export async function checkWhatsApp(phone: string) {
-  console.log("Checking WhatsApp for phone:", phone);
+export interface ImportResult {
+  imported: number;
+  skipped: number;
+  errors: Array<{ row: number; error: string }>;
+}
+
+export async function importContacts(file: File): Promise<{ success: boolean; message: string; data?: ImportResult }> {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  const response = await fetch("/api/contacts/import", {
+    method: "POST",
+    body: formData,
+  });
+
+  const result = await response.json();
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Error al importar contactos");
+  }
+  return result;
+}
+
+// Valida el número SIN enviar nada (libphonenumber-js del lado servidor).
+export async function checkWhatsApp(phone: string, country?: string) {
   const res = await fetch("/api/whatsapp/check", {
     method: "POST",
-    body: JSON.stringify({
-      phone,                 // "+18095551234"
-      message: "Hola 👋 ¿Podemos escribirte por aquí?",
-      fallbackSms: true,     // activa SMS si no hay WhatsApp
-    }),
+    body: JSON.stringify({ phone, country }),
     headers: { "Content-Type": "application/json" },
   });
 
   const data = await res.json();
-  console.log(data)
-  return data; // { ok, hasWhatsApp, channel, sid, ... }
+  return data; // { ok, valid, hasWhatsApp, e164, country, type }
 }

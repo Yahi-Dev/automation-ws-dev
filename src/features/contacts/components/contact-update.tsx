@@ -27,18 +27,19 @@ export function EditContactForm({ id }: EditContactFormProps) {
   const { contact } = useContactById(id)
   const { update, isLoading, error, clearError } = useUpdateContact(id)
 
-  const [formData, setFormData] = useState<{ name: string; phone: string; _count: number }>({
+  const [formData, setFormData] = useState<{ name: string; phone: string; country: string; _count: number }>({
     name: "",
     phone: "",
+    country: "",
     _count: 0
   })
 
   const [errors, setErrors] = useState<Partial<{ name: string; phone: string }>>({})
 
   // helpers
-  const setField = (key: "name" | "phone", value: string) => {
+  const setField = (key: "name" | "phone" | "country", value: string) => {
     setFormData((prev) => ({ ...prev, [key]: value }))
-    if (errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }))
+    if (key !== "country" && errors[key]) setErrors((prev) => ({ ...prev, [key]: undefined }))
   }
 
   // Cargar datos del contacto cuando esté disponible
@@ -61,6 +62,7 @@ export function EditContactForm({ id }: EditContactFormProps) {
         setFormData({
           name: cleanedName,
           phone: cleanedPhone,
+          country: contact.country ?? "",
           _count: cleanCount
         });
         setPrimaryLoading(false)
@@ -130,6 +132,7 @@ export function EditContactForm({ id }: EditContactFormProps) {
     const payload = {
       ...formData,
       name: formData.name.replaceAll(/\s+/g, " ").trim(),
+      country: formData.country || undefined,
     }
 
     const result = await update(payload)
@@ -202,6 +205,7 @@ export function EditContactForm({ id }: EditContactFormProps) {
                     disabled={formData._count > 0}
                     value={formData.phone}
                     onChange={handlePhoneChange}
+                    onCountryChange={(c) => setField("country", c ?? "")}
                     placeholder="Ingresa un número de teléfono"
                   />
 

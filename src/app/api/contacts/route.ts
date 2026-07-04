@@ -100,6 +100,7 @@ export async function POST(req: Request) {
         data: {
           name: data.name ?? "",
           phone: data.phone ?? "",
+          country: data.country ?? null,
           whatsapp: data.whatsapp ?? false,
           createdBy: session?.user?.email ?? "desconocido",
           createdAt: new Date(),

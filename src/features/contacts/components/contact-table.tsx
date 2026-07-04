@@ -1,10 +1,10 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef, type ChangeEvent } from "react"
 import { DataTable } from "@/src/components/data-table"
 import { Button } from "@/src/components/ui/button"
 import Image from "next/image"
-import { MoreHorizontal, Edit, Trash2, Ban, CheckCircle2 } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Ban, CheckCircle2, Upload, Loader2 } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -19,7 +19,7 @@ import { ContactsType, NameCellProps } from '../types';
 import { DeleteConfirmationModal } from "@/src/components/ui/delete"
 import { Skeleton } from "@/src/components/ui/skeleton"
 import { Badge } from "@/src/components/ui/badge"
-import { useDeleteContact, useGetAllContacts, useSetConsent } from "../hooks/use-contact"
+import { useDeleteContact, useGetAllContacts, useSetConsent, useImportContacts } from "../hooks/use-contact"
 
 const TableSkeleton = ({ cols, rows = 8 }: { cols: number; rows?: number }) => (
   <div className="space-y-3">
@@ -70,10 +70,20 @@ export default function ContactsTable() {
   const { fetchAll, contacts, isLoading = false } = useGetAllContacts()
   const { remove: handleDelete } = useDeleteContact()
   const { setConsent } = useSetConsent()
+  const { importFile, isLoading: isImporting } = useImportContacts()
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const handleConsent = async (id: number, event: "opt_in" | "opt_out") => {
     await setConsent(id, event)
     await fetchAll()
+  }
+
+  const handleImportChange = async (e: ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const ok = await importFile(file)
+    if (ok) await fetchAll()
+    e.target.value = ""
   }
 
   const [currentContactId, setCurrentContactId] = useState<number | null>(null)
@@ -112,6 +122,14 @@ export default function ContactsTable() {
       cell: ({ row }) => {
         const phone = row.getValue("phone") as string
         return <div className="font-mono">{phone}</div>
+      },
+    },
+    {
+      accessorKey: "country",
+      header: "País",
+      cell: ({ row }) => {
+        const country = row.getValue("country") as string | null
+        return <div className="font-mono uppercase">{country || "-"}</div>
       },
     },
     {
@@ -233,9 +251,32 @@ export default function ContactsTable() {
 
   return (
     <div className="container mx-auto py-5 px-5">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold">Gestión de Contactos</h1>
-        <p className="text-muted-foreground">Administra los contactos del sistema</p>
+      <div className="mb-8 flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Gestión de Contactos</h1>
+          <p className="text-muted-foreground">Administra los contactos del sistema</p>
+        </div>
+        <div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".csv,text/csv"
+            className="hidden"
+            onChange={handleImportChange}
+          />
+          <Button
+            variant="outline"
+            onClick={() => fileInputRef.current?.click()}
+            disabled={isImporting}
+          >
+            {isImporting ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Upload className="mr-2 h-4 w-4" />
+            )}
+            Importar CSV
+          </Button>
+        </div>
       </div>
 
       {primaryLoading || isLoading ? (

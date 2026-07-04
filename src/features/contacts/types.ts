@@ -5,6 +5,7 @@ export interface ContactsType {
   id: number;
   name: string;
   phone: string;
+  country?: string | null;
   createdAt: Date;
   createdBy: string;
   updatedAt: Date | null;
