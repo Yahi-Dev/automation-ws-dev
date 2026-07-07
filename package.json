@@ -18,6 +18,7 @@
     "seed": "tsx src/seed/database_seeder.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1080.0",
     "@hookform/resolvers": "^5.2.2",
     "@maskito/core": "^4.0.0",
     "@maskito/kit": "^4.0.0",

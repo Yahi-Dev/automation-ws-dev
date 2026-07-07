@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
+import { storageEnabled, putObject } from '@/src/lib/storage';
 
 // Usa Node APIs (fs/path)
 export const runtime = 'nodejs';
@@ -50,22 +51,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Crear carpeta específica si se proporciona
-    const uploadPath = path.join(process.cwd(), 'public', 'uploads', folder);
+    const fileExtension = path.extname(file.name);
+    const uniqueName = `${uuidv4()}${fileExtension}`;
+    const buffer = Buffer.from(await file.arrayBuffer());
 
+    // Object storage (S3/R2) si está configurado: funciona multi-instancia.
+    if (storageEnabled) {
+      const key = `uploads/${folder}/${uniqueName}`;
+      const imageUrl = await putObject(key, buffer, type || 'application/octet-stream');
+      return NextResponse.json({ imageUrl }, { status: 200 });
+    }
+
+    // Fallback: disco local (mono-instancia / dev).
+    const uploadPath = path.join(process.cwd(), 'public', 'uploads', folder);
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });
     }
-
-    const fileExtension = path.extname(file.name);
-    const uniqueName = `${uuidv4()}${fileExtension}`;
     const filePath = path.join(uploadPath, uniqueName);
-
-    const buffer = Buffer.from(await file.arrayBuffer());
     await fs.promises.writeFile(filePath, buffer);
 
     const imageUrl = `/uploads/${folder}/${uniqueName}`;
-
     return NextResponse.json({ imageUrl }, { status: 200 });
 
   } catch (error) {
