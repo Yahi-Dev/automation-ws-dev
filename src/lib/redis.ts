@@ -162,3 +162,40 @@ export async function getOrSetCache<T>(
   await redis.set(key, data as unknown, { ex: ttlSeconds });
   return data;
 }
+
+// ----------------------------------------------------------------------------
+// Caché versionada (invalidación por generación, sin SCAN/KEYS).
+// Compatible con Upstash REST y con el fallback en memoria.
+// Cada namespace tiene un contador de versión; al invalidar se incrementa (1 op)
+// y todas las claves de la versión anterior quedan huérfanas (expiran por TTL).
+// Las claves incluyen los parámetros, así que hay cache-aside por combinación
+// de filtros (p. ej. dashboard por rango de fechas) sin colisiones.
+// ----------------------------------------------------------------------------
+async function currentCacheVersion(namespace: string): Promise<number> {
+  const v = await redis.get<number>(`cachever:${namespace}`);
+  return typeof v === "number" ? v : 0;
+}
+
+/** Invalida todo un namespace de caché (incrementa su versión). */
+export async function bumpCacheVersion(namespace: string): Promise<number> {
+  return redis.incr(`cachever:${namespace}`);
+}
+
+/** Cache-aside con clave versionada por namespace + parámetros. */
+export async function getOrSetCacheNS<T>(
+  namespace: string,
+  keyParts: Array<string | number | undefined | null>,
+  fetcher: () => Promise<T>,
+  ttlSeconds = 60
+): Promise<T> {
+  const ver = await currentCacheVersion(namespace);
+  const suffix = keyParts.map((p) => (p === undefined || p === null ? "_" : String(p))).join(":");
+  const key = `cache:${namespace}:v${ver}:${suffix}`;
+
+  const cached = await redis.get<T>(key);
+  if (cached !== null && cached !== undefined) return cached;
+
+  const data = await fetcher();
+  await redis.set(key, data as unknown, { ex: ttlSeconds });
+  return data;
+}

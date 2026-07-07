@@ -1,6 +1,7 @@
 // src/app/api/dashboard/route.ts
 import { auth } from "@/src/lib/auth"
 import prisma from "@/src/lib/prisma"
+import { getOrSetCacheNS } from "@/src/lib/redis"
 import { HttpResponse } from "@/src/utils/httpResponse"
 import { format, subDays, startOfDay, endOfDay } from "date-fns"
 import { Prisma } from "@prisma/client"
@@ -16,6 +17,25 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url)
     const from = searchParams.get("from")
     const to = searchParams.get("to")
+
+    // Cache-aside: las métricas son globales (iguales para todos) y no requieren
+    // frescura al segundo. TTL corto (30s) absorbe ráfagas de recargas del dashboard
+    // sin recalcular ~20 queries por request. (F4 lo reemplaza por rollups.)
+    const dashboardData = await getOrSetCacheNS(
+      "dashboard",
+      [from ?? "all", to ?? "all"],
+      () => computeDashboard(from, to),
+      30
+    )
+
+    return HttpResponse.sendSuccess({ Data: dashboardData }, "Datos del dashboard obtenidos exitosamente")
+  } catch (error) {
+    console.error("Error fetching dashboard data:", error)
+    return HttpResponse.sendServerError("Error al obtener los datos del dashboard", error)
+  }
+}
+
+async function computeDashboard(from: string | null, to: string | null) {
     const dateFilter: Prisma.messageWhereInput =
       from || to
         ? { createdAt: { ...(from ? { gte: new Date(from) } : {}), ...(to ? { lte: new Date(to) } : {}) } }
@@ -116,17 +136,11 @@ export async function GET(request: NextRequest) {
       }
     })
 
-    const dashboardData = {
+    return {
       stats: { messagesSent, delivered, read, failed, pendingMessages: pending, activeContacts, deliveryRate, readRate },
       messageActivity,
       statusBreakdown,
       recentContacts,
       scheduledMessages,
     }
-
-    return HttpResponse.sendSuccess({ Data: dashboardData }, "Datos del dashboard obtenidos exitosamente")
-  } catch (error) {
-    console.error("Error fetching dashboard data:", error)
-    return HttpResponse.sendServerError("Error al obtener los datos del dashboard", error)
-  }
 }
