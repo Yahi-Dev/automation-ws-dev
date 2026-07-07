@@ -4,6 +4,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getTwilioConfig } from "@/src/lib/app-config";
 import { isValidTwilioSignature, formToParams } from "@/src/lib/twilio-webhook";
+import { safeEqual } from "@/src/lib/safe-compare";
 import { queueEnabled, enqueueWebhookEvent } from "@/src/lib/queue";
 import { applyWebhookStatus } from "@/src/lib/webhook-ingest";
 
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
     const { webhookSecret } = await getTwilioConfig();
     if (webhookSecret) {
       const token = req.nextUrl.searchParams.get("token");
-      if (token !== webhookSecret) {
+      if (!safeEqual(token, webhookSecret)) {
         return new NextResponse("Forbidden", { status: 403 });
       }
     }

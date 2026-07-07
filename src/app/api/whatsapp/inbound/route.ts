@@ -7,6 +7,7 @@ import { redis } from "@/src/lib/redis";
 import { detectConsentKeyword, findContactByPhone, applyConsent } from "@/src/lib/consent";
 import { getTwilioConfig } from "@/src/lib/app-config";
 import { isValidTwilioSignature, formToParams } from "@/src/lib/twilio-webhook";
+import { safeEqual } from "@/src/lib/safe-compare";
 
 export const runtime = "nodejs";
 
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
     const { webhookSecret } = await getTwilioConfig();
     if (webhookSecret) {
       const token = req.nextUrl.searchParams.get("token");
-      if (token !== webhookSecret) return new NextResponse("Forbidden", { status: 403 });
+      if (!safeEqual(token, webhookSecret)) return new NextResponse("Forbidden", { status: 403 });
     }
 
     const form = await req.formData();

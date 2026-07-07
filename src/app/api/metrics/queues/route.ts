@@ -5,6 +5,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/src/lib/auth";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { queueEnabled, getQueueDepths } from "@/src/lib/queue";
+import { safeEqual } from "@/src/lib/safe-compare";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -12,10 +13,10 @@ export const dynamic = "force-dynamic";
 async function authorize(req: NextRequest): Promise<boolean> {
   const token = req.nextUrl.searchParams.get("token");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && token && token === cronSecret) return true;
+  if (cronSecret && token && safeEqual(token, cronSecret)) return true;
   const session = await auth.api.getSession({ headers: req.headers });
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  return role === "admin";
+  const user = (session?.user as { role?: string; status?: string } | undefined);
+  return user?.role === "admin" && user?.status === "approved";
 }
 
 export async function GET(req: NextRequest) {

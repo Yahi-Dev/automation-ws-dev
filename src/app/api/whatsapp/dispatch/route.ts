@@ -6,6 +6,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/src/lib/auth";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { dispatchDue } from "@/src/lib/dispatch";
+import { safeEqual } from "@/src/lib/safe-compare";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -13,10 +14,10 @@ export const maxDuration = 300;
 async function authorize(req: NextRequest): Promise<boolean> {
   const token = req.nextUrl.searchParams.get("token");
   const cronSecret = process.env.CRON_SECRET;
-  if (cronSecret && token && token === cronSecret) return true;
+  if (cronSecret && token && safeEqual(token, cronSecret)) return true;
   const session = await auth.api.getSession({ headers: req.headers });
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  return role === "admin";
+  const role = (session?.user as { role?: string; status?: string } | undefined);
+  return role?.role === "admin" && role?.status === "approved";
 }
 
 async function handle(req: NextRequest) {

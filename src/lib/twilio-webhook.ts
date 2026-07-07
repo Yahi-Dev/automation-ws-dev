@@ -1,24 +1,43 @@
 // src/lib/twilio-webhook.ts
 // Validación de la firma X-Twilio-Signature de los webhooks entrantes.
-// Es OPT-IN: solo valida si TWILIO_VALIDATE_SIGNATURE === "true" (así el desarrollo
-// local por curl sigue funcionando; en producción se activa).
+// FAIL-CLOSED: se valida SIEMPRE, salvo que se desactive explícitamente en
+// desarrollo con TWILIO_VALIDATE_SIGNATURE="false" (p. ej. para pruebas por curl).
+// En producción NO definir esa variable: la firma queda obligatoria.
 import twilio from "twilio";
 import type { NextRequest } from "next/server";
 import { getTwilioConfig } from "./app-config";
+
+/**
+ * URL contra la que Twilio calculó la firma. Detrás de un proxy que termina TLS o
+ * reescribe el host, se reconstruye desde WHATSAPP_WEBHOOK_BASE_URL (host público)
+ * conservando path + query del request, para que la validación sea fiable y no haya
+ * incentivo a desactivarla.
+ */
+function signatureUrl(req: NextRequest, base?: string): string {
+  const current = req.nextUrl ?? new URL(req.url);
+  if (base) {
+    try {
+      const b = new URL(base);
+      return `${b.origin}${current.pathname}${current.search}`;
+    } catch {
+      // base malformada: caer al href del request
+    }
+  }
+  return current.href ?? req.url;
+}
 
 export async function isValidTwilioSignature(
   req: NextRequest,
   params: Record<string, string>
 ): Promise<boolean> {
-  if (process.env.TWILIO_VALIDATE_SIGNATURE !== "true") return true;
+  // Escape de desarrollo (explícito). Por defecto (variable ausente) se valida.
+  if (process.env.TWILIO_VALIDATE_SIGNATURE === "false") return true;
 
-  const { authToken } = await getTwilioConfig();
-  if (!authToken) return false;
+  const { authToken, webhookBaseUrl } = await getTwilioConfig();
+  if (!authToken) return false; // sin authToken no se puede validar -> rechazar
 
   const signature = req.headers.get("x-twilio-signature") ?? "";
-  // URL pública que Twilio firmó. Detrás de un proxy, configura la app para que
-  // req.nextUrl refleje el host público (o usa WHATSAPP_WEBHOOK_BASE_URL).
-  const url = req.nextUrl?.href ?? req.url;
+  const url = signatureUrl(req, webhookBaseUrl);
 
   try {
     return twilio.validateRequest(authToken, signature, url, params);
