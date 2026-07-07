@@ -38,6 +38,21 @@ export class HttpResponse {
     }, { status: 201 });
   }
 
+  // 202 Accepted: el trabajo se encoló y se procesará de forma asíncrona.
+  // `data` queda en null a propósito para que la UI muestre `message` (no cuenta 0).
+  static sendAccepted(message: string = 'Solicitud aceptada', extra: Record<string, unknown> = {}) {
+    return NextResponse.json({
+      status: 'accepted',
+      Permission: "Permission accepted.",
+      success: true,
+      message,
+      data: null,
+      error: false,
+      date: new Date(),
+      ...extra,
+    }, { status: 202 });
+  }
+
   static sendBadRequest(message: string = 'Solicitud incorrecta', data = {}) {
     return NextResponse.json({
       status: 'error',
@@ -126,6 +141,7 @@ export class HttpResponse {
 // Exportaciones individuales para compatibilidad
 export const sendSuccess = HttpResponse.sendSuccess;
 export const sendCreated = HttpResponse.sendCreated;
+export const sendAccepted = HttpResponse.sendAccepted;
 export const sendBadRequest = HttpResponse.sendBadRequest;
 export const sendUnauthorized = HttpResponse.sendUnauthorized;
 export const sendForbidden = HttpResponse.sendForbidden;

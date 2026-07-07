@@ -18,7 +18,8 @@ export type SendWhatsAppParams = {
 
 /** Opciones aceptadas por client.messages.create que usamos aquí. */
 type TwilioCreateOptions = {
-  from: string;
+  from?: string;
+  messagingServiceSid?: string;
   to: string;
   body?: string;
   contentSid?: string;
@@ -70,19 +71,24 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
   const cfg = await getTwilioConfig();
   const client = await getTwilioClientFromConfig();
 
-  // Sender de WhatsApp resuelto desde la config (Configuración o .env).
-  const rawFrom = cfg.whatsappFrom;
-  if (!rawFrom) {
-    throw new Error(
-      "Sender de WhatsApp no configurado (configúralo en Configuración o define TWILIO_WHATSAPP_FROM)"
-    );
-  }
-  const from = toWhatsAppAddress(rawFrom);
-
   const opts: TwilioCreateOptions = {
-    from,
     to: toWhatsAppAddress(to),
   };
+
+  // Si hay Messaging Service, se envía a través de él: Twilio resuelve el sender y
+  // aplica el rate-limit/reintentos por carrier (recomendado a escala). Si no,
+  // se usa el sender directo (Configuración o .env).
+  if (cfg.messagingServiceSid) {
+    opts.messagingServiceSid = cfg.messagingServiceSid;
+  } else {
+    const rawFrom = cfg.whatsappFrom;
+    if (!rawFrom) {
+      throw new Error(
+        "Sender de WhatsApp no configurado (configúralo en Configuración o define TWILIO_WHATSAPP_FROM)"
+      );
+    }
+    opts.from = toWhatsAppAddress(rawFrom);
+  }
 
   if (contentSid) {
     opts.contentSid = contentSid;

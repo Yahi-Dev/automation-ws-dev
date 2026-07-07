@@ -2,15 +2,12 @@
 // Recibe los callbacks de estado de Twilio (statusCallback) y actualiza el
 // estado de cada mensaje: sent -> delivered -> read, o failed/undelivered.
 import { NextRequest, NextResponse } from "next/server";
-import prisma from "@/src/lib/prisma";
-import { redis } from "@/src/lib/redis";
-import { mapTwilioStatus, statusRank } from "@/src/lib/whatsapp";
 import { getTwilioConfig } from "@/src/lib/app-config";
 import { isValidTwilioSignature, formToParams } from "@/src/lib/twilio-webhook";
+import { queueEnabled, enqueueWebhookEvent } from "@/src/lib/queue";
+import { applyWebhookStatus } from "@/src/lib/webhook-ingest";
 
 export const runtime = "nodejs";
-
-const MESSAGES_CACHE_KEY = "messages-cache";
 
 export async function POST(req: NextRequest) {
   try {
@@ -39,49 +36,13 @@ export async function POST(req: NextRequest) {
       return new NextResponse("Missing MessageSid", { status: 400 });
     }
 
-    const status = mapTwilioStatus(rawStatus);
-
-    // Buscar el mensaje por el SID del proveedor
-    const message = await prisma.message.findFirst({
-      where: { providerSid: messageSid },
-      select: { id: true, status: true },
-    });
-
-    if (!message) {
-      // Desconocido para nosotros; respondemos 200 para que Twilio no reintente.
-      return new NextResponse("", { status: 200 });
+    // Con cola: encolamos el evento y respondemos al instante (absorbe ráfagas de
+    // callbacks; el worker `webhook-ingest` hace el upsert). Sin cola: aplicamos ya.
+    if (queueEnabled) {
+      await enqueueWebhookEvent({ messageSid, rawStatus, errorCode, receivedAt: new Date().toISOString() });
+    } else {
+      await applyWebhookStatus({ messageSid, rawStatus, errorCode });
     }
-
-    // Evitar retroceder de estado por callbacks fuera de orden
-    // (ej.: un "delivered" que llega después de "read"), pero permitir
-    // siempre marcar fallos.
-    const isFailure = status === "failed" || status === "undelivered";
-    if (!isFailure && statusRank(status) >= 0 && statusRank(status) < statusRank(message.status)) {
-      return new NextResponse("", { status: 200 });
-    }
-
-    const data: {
-      status: string;
-      updatedAt: Date;
-      updatedBy: string;
-      deliveredAt?: Date;
-      readAt?: Date;
-      errorCode?: string;
-    } = {
-      status,
-      updatedAt: new Date(),
-      updatedBy: "twilio-webhook",
-    };
-    if (status === "delivered") data.deliveredAt = new Date();
-    if (status === "read") {
-      data.readAt = new Date();
-      // si llega "read" sin haber registrado delivered, lo inferimos
-      data.deliveredAt = new Date();
-    }
-    if (errorCode) data.errorCode = errorCode;
-
-    await prisma.message.update({ where: { id: message.id }, data });
-    await redis.del(MESSAGES_CACHE_KEY).catch(() => {});
 
     // Twilio espera 200 (vacío o TwiML)
     return new NextResponse("", { status: 200 });

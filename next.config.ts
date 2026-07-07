@@ -1,7 +1,9 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-   images: {
+  // bullmq/ioredis son solo de servidor (Node): que el bundler no intente empaquetarlos.
+  serverExternalPackages: ["bullmq", "ioredis"],
+  images: {
     remotePatterns: [
       {
         protocol: "https",

@@ -1,12 +1,19 @@
 // src/lib/campaign-send.ts
 // Lógica central de envío de una campaña (post) a sus contactos pendientes.
-// Reutilizada por POST /api/whatsapp y por el dispatch programado.
+// Reutilizada por POST /api/whatsapp (fallback síncrono) y por el worker `campaign-send`.
+//
+// Idempotencia (competing consumers / reintentos): cada mensaje se "reclama" con un
+// updateMany condicional (pending/failed -> queued). Solo el worker que gana el reclamo
+// envía; si un job se reintenta tras un fallo parcial, los ya enviados (status "sent")
+// no vuelven a seleccionarse. Los "queued" colgados (envío iniciado pero proceso caído)
+// se recuperan tras STUCK_MS.
 import prisma from "./prisma";
-import { redis } from "./redis";
+import { redis, bumpCacheVersion } from "./redis";
 import { sendWhatsAppMessage, isValidE164, getStatusCallbackUrl } from "./whatsapp";
 import { getTwilioConfig } from "./app-config";
 
 const MESSAGES_CACHE_KEY = "messages-cache";
+const STUCK_MS = 90_000; // un "queued" más viejo que esto se considera colgado y es recuperable
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export type SendResult = {
@@ -49,12 +56,22 @@ export async function sendPostMessages(
     }
   }
 
-  const statusFilter = includeSent
+  // Estados elegibles para enviar (sin incluir "queued", que es el marcador de reclamo).
+  const baseStatuses = includeSent
     ? ["pending", "failed", "sent", "undelivered"]
     : ["pending", "failed"];
 
+  // Seleccionamos elegibles + "queued" colgados (recuperación de envíos interrumpidos).
+  const stuckCutoff = new Date(Date.now() - STUCK_MS);
   const pending = await prisma.message.findMany({
-    where: { postId, isDeleted: false, status: { in: statusFilter } },
+    where: {
+      postId,
+      isDeleted: false,
+      OR: [
+        { status: { in: baseStatuses } },
+        { status: "queued", updatedAt: { lt: stuckCutoff } },
+      ],
+    },
     include: { contact: { select: { id: true, name: true, phone: true, consentState: true } } },
     orderBy: { id: "asc" },
   });
@@ -79,6 +96,20 @@ export async function sendPostMessages(
     const msg = pending[i];
     const phone = msg.contact?.phone ?? "";
     const consentState = msg.contact?.consentState ?? "unknown";
+
+    // --- Reclamo idempotente: pending/failed/(queued colgado) -> queued ---
+    // Si otro worker o intento ya lo reclamó/envió, count === 0 y lo saltamos.
+    const claim = await prisma.message.updateMany({
+      where: {
+        id: msg.id,
+        OR: [
+          { status: { in: baseStatuses } },
+          { status: "queued", updatedAt: { lt: stuckCutoff } },
+        ],
+      },
+      data: { status: "queued", updatedBy: actor, updatedAt: new Date() },
+    });
+    if (claim.count === 0) continue;
 
     if (consentState === "opted_out") {
       failed++;
@@ -129,5 +160,6 @@ export async function sendPostMessages(
   }
 
   await redis.del(MESSAGES_CACHE_KEY).catch(() => {});
+  await bumpCacheVersion("dashboard").catch(() => {});
   return { ok: true, postId, total: pending.length, sent, failed, results };
 }

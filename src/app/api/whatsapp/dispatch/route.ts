@@ -4,9 +4,8 @@
 // o por sesión de administrador.
 import { NextRequest } from "next/server";
 import { auth } from "@/src/lib/auth";
-import prisma from "@/src/lib/prisma";
 import { HttpResponse } from "@/src/utils/httpResponse";
-import { sendPostMessages } from "@/src/lib/campaign-send";
+import { dispatchDue } from "@/src/lib/dispatch";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
@@ -23,28 +22,12 @@ async function authorize(req: NextRequest): Promise<boolean> {
 async function handle(req: NextRequest) {
   if (!(await authorize(req))) return HttpResponse.sendForbidden("No autorizado");
 
-  const duePosts = await prisma.posts.findMany({
-    where: {
-      isDeleted: false,
-      schedule: { lte: new Date() },
-      messages: { some: { isDeleted: false, status: { in: ["pending", "failed"] } } },
-    },
-    select: { id: true },
-  });
-
-  const summaries: Array<Record<string, unknown>> = [];
-  for (const p of duePosts) {
-    const outcome = await sendPostMessages(p.id, "cron");
-    summaries.push(
-      outcome.ok
-        ? { postId: p.id, sent: outcome.sent, failed: outcome.failed, total: outcome.total }
-        : { postId: p.id, skipped: outcome.reason }
-    );
-  }
+  // Con cola: encola un job por campaña vencida (procesa el worker). Sin cola: envía síncrono.
+  const result = await dispatchDue("cron");
 
   return HttpResponse.sendSuccess(
-    { Data: { dispatched: duePosts.length, summaries } },
-    `Dispatch: ${duePosts.length} campaña(s) procesada(s)`
+    { Data: result },
+    `Dispatch: ${result.dispatched} campaña(s) ${result.mode === "queued" ? "encolada(s)" : "procesada(s)"}`
   );
 }
 
