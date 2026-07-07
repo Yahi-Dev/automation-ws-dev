@@ -23,6 +23,7 @@ import {
 import { sendPostMessages } from "../lib/campaign-send";
 import { applyWebhookStatus } from "../lib/webhook-ingest";
 import { dispatchDue } from "../lib/dispatch";
+import { recomputeDailyStats } from "../lib/rollups";
 
 async function main() {
   if (!queueEnabled) {
@@ -58,12 +59,14 @@ async function main() {
     { connection, concurrency: webhookConcurrency }
   );
 
-  // --- scheduled-dispatch (repetible cada minuto) ---
+  // --- scheduled-dispatch (repetible cada minuto): despacha vencidas + refresca rollups ---
   const dispatchWorker = new Worker(
     QUEUE_NAMES.scheduledDispatch,
     async () => {
       const result = await dispatchDue("cron");
       if (result.dispatched > 0) console.log(`[worker] dispatch: ${result.dispatched} campaña(s) encolada(s)`);
+      // Rollup del dashboard (F4): recomputa los últimos días para lecturas O(1).
+      await recomputeDailyStats(8).catch((e) => console.warn("[worker] rollup falló:", e?.message ?? e));
       return result;
     },
     { connection, concurrency: 1 }

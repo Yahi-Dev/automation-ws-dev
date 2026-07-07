@@ -217,7 +217,22 @@ model message {
   @@index([status])
   @@index([postId, status])
   @@index([status, createdAt])
+  @@index([sentAt]) // acelera la recomputación del rollup diario (F4)
   @@map("message")
+}
+
+// Rollup diario de actividad para el dashboard (F4): evita ~21 COUNT en vivo por request.
+// Se refresca de forma periódica por el worker con la MISMA lógica que el cálculo en vivo,
+// así los valores mostrados no cambian. Se usa `DateTime` (no Date) para que el día
+// escrito y el consultado coincidan exactamente (sin desajustes de zona horaria).
+model messageDailyStats {
+  day        DateTime @id // inicio del día (00:00) en la zona del servidor
+  enviados   Int      @default(0) // status in (sent,delivered,read) por sentAt de ese día
+  fallidos   Int      @default(0) // status in (failed,undelivered) por updatedAt de ese día
+  pendientes Int      @default(0) // status in (pending,queued) por createdAt de ese día
+  updatedAt  DateTime @default(now()) @updatedAt
+
+  @@map("message_daily_stats")
 }
 
 // schema.prisma

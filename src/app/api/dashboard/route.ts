@@ -2,6 +2,7 @@
 import { auth } from "@/src/lib/auth"
 import prisma from "@/src/lib/prisma"
 import { getOrSetCacheNS } from "@/src/lib/redis"
+import { getDailyActivityFromRollup } from "@/src/lib/rollups"
 import { HttpResponse } from "@/src/utils/httpResponse"
 import { format, subDays, startOfDay, endOfDay } from "date-fns"
 import { Prisma } from "@prisma/client"
@@ -62,19 +63,33 @@ async function computeDashboard(from: string | null, to: string | null) {
     const deliveryRate = messagesSent > 0 ? round(((delivered + read) / messagesSent) * 100) : 0
     const readRate = delivered + read > 0 ? round((read / (delivered + read)) * 100) : 0
 
-    // Actividad de los últimos 7 días (real)
-    const messageActivity: { date: string; enviados: number; fallidos: number; pendientes: number }[] = []
+    // Actividad de los últimos 7 días. Preferimos el rollup precomputado (F4);
+    // si está incompleto (o no hay worker que lo refresque), caemos a cálculo en vivo
+    // con la MISMA lógica -> los valores no cambian.
     const dayNames = ["Dom", "Lun", "Mar", "Mié", "Jue", "Vie", "Sab"]
-    for (let i = 6; i >= 0; i--) {
-      const date = subDays(new Date(), i)
-      const dayStart = startOfDay(date)
-      const dayEnd = endOfDay(date)
-      const [enviados, fallidos, pendientes] = await Promise.all([
-        prisma.message.count({ where: { isDeleted: false, status: { in: ["sent", "delivered", "read"] }, sentAt: { gte: dayStart, lte: dayEnd } } }),
-        prisma.message.count({ where: { isDeleted: false, status: { in: ["failed", "undelivered"] }, updatedAt: { gte: dayStart, lte: dayEnd } } }),
-        prisma.message.count({ where: { isDeleted: false, status: { in: ["pending", "queued"] }, createdAt: { gte: dayStart, lte: dayEnd } } }),
-      ])
-      messageActivity.push({ date: dayNames[date.getDay()], enviados, fallidos, pendientes })
+    let messageActivity: { date: string; enviados: number; fallidos: number; pendientes: number }[]
+
+    const rollup = await getDailyActivityFromRollup(7)
+    if (rollup) {
+      messageActivity = rollup.map((r) => ({
+        date: dayNames[r.date.getDay()],
+        enviados: r.enviados,
+        fallidos: r.fallidos,
+        pendientes: r.pendientes,
+      }))
+    } else {
+      messageActivity = []
+      for (let i = 6; i >= 0; i--) {
+        const date = subDays(new Date(), i)
+        const dayStart = startOfDay(date)
+        const dayEnd = endOfDay(date)
+        const [enviados, fallidos, pendientes] = await Promise.all([
+          prisma.message.count({ where: { isDeleted: false, status: { in: ["sent", "delivered", "read"] }, sentAt: { gte: dayStart, lte: dayEnd } } }),
+          prisma.message.count({ where: { isDeleted: false, status: { in: ["failed", "undelivered"] }, updatedAt: { gte: dayStart, lte: dayEnd } } }),
+          prisma.message.count({ where: { isDeleted: false, status: { in: ["pending", "queued"] }, createdAt: { gte: dayStart, lte: dayEnd } } }),
+        ])
+        messageActivity.push({ date: dayNames[date.getDay()], enviados, fallidos, pendientes })
+      }
     }
 
     // Distribución por estado (para gráfico)
