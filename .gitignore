@@ -71,3 +71,21 @@ logs/
 .agents/
 .skills/
 skills-lock.json
+
+# lint / build caches
+.eslintcache
+*.tsbuildinfo
+
+# artefactos de testing (Playwright / e2e / cobertura)
+/test-results/
+/playwright-report/
+/.playwright/
+/blob-report/
+/coverage/
+
+# archivos locales / temporales
+*.local
+tmp/
+temp/
+*.bak
+*.tgz
