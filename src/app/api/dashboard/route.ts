@@ -1,6 +1,6 @@
 // src/app/api/dashboard/route.ts
 import { auth } from "@/src/lib/auth"
-import prisma from "@/src/lib/prisma"
+import { prismaRead } from "@/src/lib/prisma"
 import { getOrSetCacheNS } from "@/src/lib/redis"
 import { getDailyActivityFromRollup } from "@/src/lib/rollups"
 import { HttpResponse } from "@/src/utils/httpResponse"
@@ -44,7 +44,7 @@ async function computeDashboard(from: string | null, to: string | null) {
     const baseWhere: Prisma.messageWhereInput = { isDeleted: false, ...dateFilter }
 
     // Un solo groupBy para el desglose por estado
-    const grouped = await prisma.message.groupBy({
+    const grouped = await prismaRead.message.groupBy({
       by: ["status"],
       where: baseWhere,
       _count: { _all: true },
@@ -59,7 +59,7 @@ async function computeDashboard(from: string | null, to: string | null) {
     const failed = sum("failed", "undelivered")
     const pending = sum("pending", "queued")
     const messagesSent = sent + delivered + read // llegaron a Twilio
-    const activeContacts = await prisma.contacts.count({ where: { isDeleted: false } })
+    const activeContacts = await prismaRead.contacts.count({ where: { isDeleted: false } })
     const deliveryRate = messagesSent > 0 ? round(((delivered + read) / messagesSent) * 100) : 0
     const readRate = delivered + read > 0 ? round((read / (delivered + read)) * 100) : 0
 
@@ -84,9 +84,9 @@ async function computeDashboard(from: string | null, to: string | null) {
         const dayStart = startOfDay(date)
         const dayEnd = endOfDay(date)
         const [enviados, fallidos, pendientes] = await Promise.all([
-          prisma.message.count({ where: { isDeleted: false, status: { in: ["sent", "delivered", "read"] }, sentAt: { gte: dayStart, lte: dayEnd } } }),
-          prisma.message.count({ where: { isDeleted: false, status: { in: ["failed", "undelivered"] }, updatedAt: { gte: dayStart, lte: dayEnd } } }),
-          prisma.message.count({ where: { isDeleted: false, status: { in: ["pending", "queued"] }, createdAt: { gte: dayStart, lte: dayEnd } } }),
+          prismaRead.message.count({ where: { isDeleted: false, status: { in: ["sent", "delivered", "read"] }, sentAt: { gte: dayStart, lte: dayEnd } } }),
+          prismaRead.message.count({ where: { isDeleted: false, status: { in: ["failed", "undelivered"] }, updatedAt: { gte: dayStart, lte: dayEnd } } }),
+          prismaRead.message.count({ where: { isDeleted: false, status: { in: ["pending", "queued"] }, createdAt: { gte: dayStart, lte: dayEnd } } }),
         ])
         messageActivity.push({ date: dayNames[date.getDay()], enviados, fallidos, pendientes })
       }
@@ -102,7 +102,7 @@ async function computeDashboard(from: string | null, to: string | null) {
     ]
 
     // Contactos recientes (estado real de consentimiento)
-    const recentContactsData = await prisma.contacts.findMany({
+    const recentContactsData = await prismaRead.contacts.findMany({
       where: { isDeleted: false },
       include: { messages: { where: { isDeleted: false }, orderBy: { createdAt: "desc" }, take: 1 } },
       orderBy: { createdAt: "desc" },
@@ -124,7 +124,7 @@ async function computeDashboard(from: string | null, to: string | null) {
     })
 
     // Próximos envíos programados (real)
-    const scheduledMessagesData = await prisma.message.findMany({
+    const scheduledMessagesData = await prismaRead.message.findMany({
       where: { isDeleted: false, status: "pending", post: { schedule: { gte: new Date() } } },
       include: { contact: true, post: true },
       orderBy: { post: { schedule: "asc" } },

@@ -42,6 +42,7 @@ type PrismaClientSingleton = ReturnType<typeof prismaClientSingleton>;
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClientSingleton | undefined;
+  prismaRead: PrismaClientSingleton | undefined;
 };
 
 const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
@@ -49,3 +50,19 @@ const prisma = globalForPrisma.prisma ?? prismaClientSingleton();
 export default prisma;
 
 if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = prisma;
+
+// ---------------------------------------------------------------------------
+// Réplica de lectura (F7, opcional). Si DATABASE_REPLICA_URL está definida, las
+// lecturas pesadas (dashboard, recomputo de rollups, reportes) pueden dirigirse a
+// una réplica para descargar al primario. Si no, `prismaRead` es el mismo primario.
+// Uso por convención: SOLO lecturas en prismaRead; todas las escrituras en `prisma`.
+// ---------------------------------------------------------------------------
+function buildReplicaClient(): PrismaClientSingleton {
+  const replica = process.env.DATABASE_REPLICA_URL;
+  if (!replica) return prisma;
+  return new PrismaClient({ datasources: { db: { url: replica } } });
+}
+
+export const prismaRead: PrismaClientSingleton = globalForPrisma.prismaRead ?? buildReplicaClient();
+
+if (process.env.NODE_ENV !== "production") globalForPrisma.prismaRead = prismaRead;

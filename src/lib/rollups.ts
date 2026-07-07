@@ -2,7 +2,7 @@
 // Rollup diario de actividad para el dashboard (F4).
 // La recomputación usa EXACTAMENTE la misma lógica/anclas de fecha que el cálculo en
 // vivo del dashboard, así los valores mostrados no cambian; solo se sirven más rápido.
-import prisma from "./prisma";
+import prisma, { prismaRead } from "./prisma";
 import { startOfDay, endOfDay, subDays } from "date-fns";
 
 const SENT = ["sent", "delivered", "read"];
@@ -19,9 +19,9 @@ export async function recomputeDailyStats(days = 8): Promise<void> {
     const dayEnd = endOfDay(date);
 
     const [enviados, fallidos, pendientes] = await Promise.all([
-      prisma.message.count({ where: { isDeleted: false, status: { in: SENT }, sentAt: { gte: dayStart, lte: dayEnd } } }),
-      prisma.message.count({ where: { isDeleted: false, status: { in: FAILED }, updatedAt: { gte: dayStart, lte: dayEnd } } }),
-      prisma.message.count({ where: { isDeleted: false, status: { in: PENDING }, createdAt: { gte: dayStart, lte: dayEnd } } }),
+      prismaRead.message.count({ where: { isDeleted: false, status: { in: SENT }, sentAt: { gte: dayStart, lte: dayEnd } } }),
+      prismaRead.message.count({ where: { isDeleted: false, status: { in: FAILED }, updatedAt: { gte: dayStart, lte: dayEnd } } }),
+      prismaRead.message.count({ where: { isDeleted: false, status: { in: PENDING }, createdAt: { gte: dayStart, lte: dayEnd } } }),
     ]);
 
     await prisma.messageDailyStats.upsert({
@@ -38,7 +38,7 @@ export async function recomputeDailyStats(days = 8): Promise<void> {
  */
 export async function getDailyActivityFromRollup(days = 7): Promise<DailyActivity[] | null> {
   const start = startOfDay(subDays(new Date(), days - 1));
-  const rows = await prisma.messageDailyStats.findMany({
+  const rows = await prismaRead.messageDailyStats.findMany({
     where: { day: { gte: start } },
     orderBy: { day: "asc" },
   });

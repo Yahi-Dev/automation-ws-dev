@@ -108,6 +108,21 @@ export async function enqueueWebhookEvent(data: WebhookJobData): Promise<string 
   return job.id ?? null;
 }
 
+/**
+ * Profundidad de las colas (waiting/active/delayed/failed/completed). Sirve para
+ * autoescalar workers según carga. Devuelve null si la cola no está habilitada.
+ */
+export async function getQueueDepths(): Promise<Record<string, Record<string, number>> | null> {
+  if (!queueEnabled) return null;
+  const qs = [getCampaignQueue(), getWebhookQueue(), getDispatchQueue()];
+  const out: Record<string, Record<string, number>> = {};
+  for (const q of qs) {
+    if (!q) continue;
+    out[q.name] = await q.getJobCounts("waiting", "active", "delayed", "failed", "completed");
+  }
+  return out;
+}
+
 /** Registra el job repetible de dispatch (cada minuto). Idempotente. */
 export async function ensureRepeatableDispatch(): Promise<void> {
   const q = getDispatchQueue();
