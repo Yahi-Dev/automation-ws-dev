@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { loginRateLimit } from './lib/rate-limit'
+import { getClientIp } from './lib/client-ip'
 
 type AllowedMethod = 'POST'
 
@@ -30,7 +31,7 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next()
   }
 
-  const ip = getClientIP(request)
+  const ip = getClientIp(request)
   if (!ip) return NextResponse.next()
 
   try {
@@ -56,25 +57,6 @@ export async function middleware(request: NextRequest) {
     // Ante un error de rate limiting, permitir el acceso (fail-open).
     console.error('Error en rate limiting:', error)
     return NextResponse.next()
-  }
-}
-
-function getClientIP(request: NextRequest): string | null {
-  try {
-    const forwarded = request.headers.get('x-forwarded-for')
-    const realIP = request.headers.get('x-real-ip')
-    const cfConnectingIP = request.headers.get('cf-connecting-ip')
-
-    if (forwarded) {
-      const ips = forwarded.split(',').map((ip: string) => ip.trim())
-      return ips[0] || null
-    }
-    if (cfConnectingIP) return cfConnectingIP
-    if (realIP) return realIP
-
-    return process.env.NODE_ENV === 'development' ? '127.0.0.1' : null
-  } catch {
-    return null
   }
 }
 

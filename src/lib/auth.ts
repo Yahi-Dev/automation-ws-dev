@@ -37,6 +37,22 @@ export const auth = betterAuth({
     storeSessionInDatabase: true,
   },
 
+  // Rate-limit nativo de better-auth para TODOS los endpoints de auth (login, signup,
+  // forgot/reset password, verify). Usa secondaryStorage (Redis) -> contador compartido
+  // entre instancias (no per-proceso). Complementa al middleware de login.
+  rateLimit: {
+    enabled: true,
+    window: 60, // segundos
+    max: 30, // peticiones por ventana por IP
+    storage: "secondary-storage",
+    customRules: {
+      "/sign-in/email": { window: 60, max: 10 },
+      "/sign-up/email": { window: 60, max: 5 },
+      "/forget-password": { window: 3600, max: 5 },
+      "/reset-password": { window: 3600, max: 10 },
+    },
+  },
+
   user: {
     additionalFields: {
       phone: { type: "string", input: true },
