@@ -52,13 +52,6 @@ export async function POST(req: NextRequest) {
       createdAt: Date;
     }[] = [];
 
-    // Teléfonos ya existentes (para no duplicar)
-    const existing = await prisma.contacts.findMany({
-      where: { isDeleted: false },
-      select: { phone: true },
-    });
-    const existingPhones = new Set(existing.map((c) => c.phone));
-
     rows.forEach((row, idx) => {
       const line = idx + 2; // +1 encabezado, +1 base-1
       const name = pick(row, ["name", "nombre"]);
@@ -77,8 +70,8 @@ export async function POST(req: NextRequest) {
       }
 
       const e164 = pn.number;
-      if (existingPhones.has(e164) || seenPhones.has(e164)) {
-        errors.push({ row: line, error: `Duplicado: ${e164}` });
+      if (seenPhones.has(e164)) {
+        errors.push({ row: line, error: `Duplicado en el archivo: ${e164}` });
         return;
       }
       seenPhones.add(e164);
@@ -94,15 +87,20 @@ export async function POST(req: NextRequest) {
     });
 
     let imported = 0;
+    let dupExisting = 0;
     if (toInsert.length > 0) {
-      const res = await prisma.contacts.createMany({ data: toInsert });
+      // La dedup contra teléfonos ya existentes la hace la DB (índice único) con skipDuplicates,
+      // sin cargar todos los contactos a memoria (escalable a millones).
+      const res = await prisma.contacts.createMany({ data: toInsert, skipDuplicates: true });
       imported = res.count;
+      dupExisting = toInsert.length - imported; // ya existían en la DB
       await redis.del(CONTACTS_CACHE_KEY).catch(() => {});
     }
 
+    const skipped = errors.length + dupExisting;
     return HttpResponse.sendSuccess(
-      { Data: { imported, skipped: errors.length, errors: errors.slice(0, 50) }, Total: rows.length },
-      `Importados ${imported} de ${rows.length} (${errors.length} omitido(s))`
+      { Data: { imported, skipped, dupExisting, errors: errors.slice(0, 50) }, Total: rows.length },
+      `Importados ${imported} de ${rows.length} (${skipped} omitido(s), ${dupExisting} ya existían)`
     );
   } catch (error) {
     return HttpResponse.sendServerError("Error al importar contactos", error);

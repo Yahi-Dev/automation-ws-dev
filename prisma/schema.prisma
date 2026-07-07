@@ -83,7 +83,7 @@ model Verification {
 model contacts {
   id        Int      @id @default(autoincrement())
   name      String   @db.Text
-  phone     String   @db.Text
+  phone     String   @unique @db.VarChar(32) // E.164; único para dedup e import eficiente
   country   String?  @db.VarChar(2) // ISO 3166-1 alpha-2 (ej: DO, US, MX)
   whatsapp  Boolean  @default(false) // "alcanzable" por WhatsApp, NO es consentimiento
 
@@ -104,6 +104,7 @@ model contacts {
   consentEvents consentEvents[]
 
   @@index([consentState])
+  @@index([createdAt])
   @@map("contacts")
 }
 
@@ -170,6 +171,8 @@ model posts {
 
   @@map("posts")
   @@index([contentTemplateId])
+  @@index([schedule])
+  @@index([createdAt])
 }
 
 model imagesPosts {
@@ -208,9 +211,12 @@ model message {
   post      posts    @relation(fields: [postId], references: [id], onDelete: Cascade)
   contact   contacts @relation(fields: [contactId], references: [id], onDelete: Cascade)
 
+  @@unique([postId, contactId]) // idempotencia: un mensaje por (campaña, contacto)
   @@index([providerSid])
   @@index([postId])
   @@index([status])
+  @@index([postId, status])
+  @@index([status, createdAt])
   @@map("message")
 }
 
