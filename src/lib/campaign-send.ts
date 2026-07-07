@@ -9,8 +9,9 @@
 // se recuperan tras STUCK_MS.
 import prisma from "./prisma";
 import { redis, bumpCacheVersion } from "./redis";
-import { sendWhatsAppMessage, isValidE164, getStatusCallbackUrl } from "./whatsapp";
+import { sendWhatsAppMessage, isValidE164, getStatusCallbackUrl, twilioBreaker } from "./whatsapp";
 import { getTwilioConfig } from "./app-config";
+import { captureError } from "./logger";
 
 const MESSAGES_CACHE_KEY = "messages-cache";
 const STUCK_MS = 90_000; // un "queued" más viejo que esto se considera colgado y es recuperable
@@ -97,6 +98,10 @@ export async function sendPostMessages(
     const phone = msg.contact?.phone ?? "";
     const consentState = msg.contact?.consentState ?? "unknown";
 
+    // Si el breaker de Twilio está abierto, cortamos este run: los mensajes no
+    // reclamados quedan pendientes y se reintentan luego (el job reintenta con backoff).
+    if (twilioBreaker.isOpen()) break;
+
     // --- Reclamo idempotente: pending/failed/(queued colgado) -> queued ---
     // Si otro worker o intento ya lo reclamó/envió, count === 0 y lo saltamos.
     const claim = await prisma.message.updateMany({
@@ -147,8 +152,10 @@ export async function sendPostMessages(
       results.push({ messageId: msg.id, contactId: msg.contactId, ok: true, sid: tw.sid });
     } catch (err: unknown) {
       failed++;
-      const e = err as { message?: string; code?: number | string };
-      await markFailed(msg.id, e?.code != null ? String(e.code) : "TWILIO_ERROR", e?.message ?? "Error al enviar");
+      const e = err as { message?: string; code?: number | string; circuitOpen?: boolean };
+      const code = e?.circuitOpen ? "TWILIO_CIRCUIT_OPEN" : e?.code != null ? String(e.code) : "TWILIO_ERROR";
+      await markFailed(msg.id, code, e?.message ?? "Error al enviar");
+      captureError(err, { where: "campaign-send", messageId: msg.id, postId });
       results.push({ messageId: msg.id, contactId: msg.contactId, ok: false, error: e?.message ?? "TWILIO_ERROR" });
     }
 

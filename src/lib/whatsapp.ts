@@ -2,6 +2,14 @@
 // Helper central para el envío de mensajes de WhatsApp vía Twilio.
 import { getTwilioClientFromConfig } from "./twilio";
 import { getTwilioConfig } from "./app-config";
+import { CircuitBreaker } from "./circuit-breaker";
+
+// Breaker compartido: si Twilio empieza a fallar, dejamos de golpearlo un tiempo.
+export const twilioBreaker = new CircuitBreaker({
+  threshold: Number(process.env.TWILIO_BREAKER_THRESHOLD ?? 5),
+  cooldownMs: Number(process.env.TWILIO_BREAKER_COOLDOWN_MS ?? 30_000),
+  name: "twilio",
+});
 
 export type SendWhatsAppParams = {
   /** Teléfono destino en E.164 (con o sin prefijo "whatsapp:"). */
@@ -101,7 +109,8 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
 
   if (statusCallback) opts.statusCallback = statusCallback;
 
-  return client.messages.create(opts);
+  // Protegido por circuit breaker: falla rápido si Twilio está caído.
+  return twilioBreaker.exec(() => client.messages.create(opts));
 }
 
 /** Mapea el MessageStatus de Twilio a nuestro estado interno. */

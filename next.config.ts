@@ -13,8 +13,8 @@ function s3RemotePattern() {
 }
 
 const nextConfig: NextConfig = {
-  // bullmq/ioredis son solo de servidor (Node): que el bundler no intente empaquetarlos.
-  serverExternalPackages: ["bullmq", "ioredis"],
+  // Paquetes solo de servidor (Node): que el bundler no intente empaquetarlos.
+  serverExternalPackages: ["bullmq", "ioredis", "pino", "@sentry/node"],
   images: {
     remotePatterns: [
       ...s3RemotePattern(),

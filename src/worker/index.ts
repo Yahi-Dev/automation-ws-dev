@@ -24,6 +24,7 @@ import { sendPostMessages } from "../lib/campaign-send";
 import { applyWebhookStatus } from "../lib/webhook-ingest";
 import { dispatchDue } from "../lib/dispatch";
 import { recomputeDailyStats } from "../lib/rollups";
+import { captureError, logger } from "../lib/logger";
 
 async function main() {
   if (!queueEnabled) {
@@ -77,14 +78,15 @@ async function main() {
     ["webhook-ingest", webhookWorker],
     ["scheduled-dispatch", dispatchWorker],
   ] as const) {
-    w.on("failed", (job, err) => console.warn(`[worker:${name}] job ${job?.id} falló:`, err?.message ?? err));
-    w.on("error", (err) => console.warn(`[worker:${name}] error:`, err?.message ?? err));
+    w.on("failed", (job, err) => captureError(err, { worker: name, jobId: job?.id }));
+    w.on("error", (err) => captureError(err, { worker: name, event: "error" }));
   }
 
   await ensureRepeatableDispatch();
 
-  console.log(
-    `[worker] listo. Concurrencia campaign=${campaignConcurrency}, webhook=${webhookConcurrency}. Dispatch cada 60s.`
+  logger.info(
+    { campaignConcurrency, webhookConcurrency },
+    "[worker] listo. Dispatch + rollup cada 60s."
   );
 
   // Cierre ordenado
