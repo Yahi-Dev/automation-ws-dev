@@ -1,7 +1,7 @@
 // src/app/api/whatsapp/route.ts
 // Envío masivo (broadcast) de una campaña/post a sus contactos asignados.
 import { NextRequest } from "next/server";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { sendPostMessages } from "@/src/lib/campaign-send";
 import { queueEnabled, enqueueCampaign } from "@/src/lib/queue";
@@ -22,10 +22,8 @@ export const maxDuration = 300;
  */
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) {
-      return HttpResponse.sendUnauthorized("Debes iniciar sesión para enviar mensajes");
-    }
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     const body = await req.json().catch(() => ({}));
     const postId = Number(body?.postId);
@@ -33,7 +31,7 @@ export async function POST(req: NextRequest) {
       return HttpResponse.sendBadRequest("postId inválido");
     }
 
-    const actor = session.user.email ?? "system";
+    const actor = gate.user.email ?? "system";
 
     // --- Camino asíncrono: encolar y responder de inmediato ---
     if (queueEnabled) {

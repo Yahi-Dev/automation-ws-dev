@@ -2,7 +2,7 @@
 // Consulta el estado de aprobación de una plantilla en Twilio y lo persiste local.
 import { NextRequest, NextResponse } from "next/server";
 import { contentFetch } from "@/src/lib/twilio-content";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 
 export const runtime = "nodejs";
@@ -10,8 +10,8 @@ export const runtime = "nodejs";
 type CustomError = { message: string; details?: unknown; status?: number };
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ sid: string }> }) {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     try {
         const { sid } = await params;

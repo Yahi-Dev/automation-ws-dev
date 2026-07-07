@@ -1,5 +1,5 @@
 // src/app/api/dashboard/route.ts
-import { auth } from "@/src/lib/auth"
+import { requireAuth } from "@/src/lib/authz"
 import { prismaRead } from "@/src/lib/prisma"
 import { getOrSetCacheNS } from "@/src/lib/redis"
 import { getDailyActivityFromRollup } from "@/src/lib/rollups"
@@ -12,8 +12,8 @@ const round = (n: number) => Math.round(n * 100) / 100
 
 export async function GET(request: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: request.headers })
-    if (!session) return HttpResponse.sendUnauthorized("No autenticado. Por favor inicia sesión.")
+    const gate = await requireAuth(request)
+    if ("response" in gate) return gate.response
 
     const { searchParams } = new URL(request.url)
     const from = searchParams.get("from")

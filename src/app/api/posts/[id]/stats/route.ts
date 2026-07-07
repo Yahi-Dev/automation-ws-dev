@@ -1,15 +1,15 @@
 // src/app/api/posts/[id]/stats/route.ts
 // Desglose de estados de los mensajes de una campaña (post) para el monitoreo.
 import { NextRequest } from "next/server";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 import { HttpResponse } from "@/src/utils/httpResponse";
 
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+  const gate = await requireAuth(req);
+  if ("response" in gate) return gate.response;
 
   const { id } = await params;
   const postId = Number(id);

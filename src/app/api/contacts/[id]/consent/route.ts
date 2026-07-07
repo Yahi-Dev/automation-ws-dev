@@ -1,7 +1,7 @@
 // src/app/api/contacts/[id]/consent/route.ts
 // Cambia manualmente el consentimiento de un contacto (opt-in / opt-out) desde la UI.
 import { NextRequest } from "next/server";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 import { redis } from "@/src/lib/redis";
 import { CatchError } from "@/src/utils/catchError";
@@ -17,10 +17,8 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) {
-      return HttpResponse.sendUnauthorized("Debes iniciar sesión");
-    }
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     const { id } = await params;
     const contactId = Number(id);
@@ -47,7 +45,7 @@ export async function POST(
         contactId,
         event,
         source: "manual",
-        actor: session.user.email ?? "system",
+        actor: gate.user.email ?? "system",
       })
     );
     if (error) {

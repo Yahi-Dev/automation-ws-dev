@@ -4,7 +4,7 @@
 // PUT hace upsert cifrando los secretos que vengan con valor nuevo.
 import { NextRequest } from "next/server";
 import { Prisma } from "@prisma/client";
-import { auth } from "@/src/lib/auth";
+import { requireAdmin } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { encryptSecret } from "@/src/lib/crypto";
@@ -18,8 +18,8 @@ const numOrNull = (v: unknown): number | null =>
   v === "" || v == null || Number.isNaN(Number(v)) ? null : Number(v);
 
 export async function GET(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+  const gate = await requireAdmin(req);
+  if ("response" in gate) return gate.response;
 
   const s = await prisma.appSettings.findFirst();
   return HttpResponse.sendSuccess({
@@ -43,8 +43,8 @@ export async function GET(req: NextRequest) {
 }
 
 export async function PUT(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+  const gate = await requireAdmin(req);
+  if ("response" in gate) return gate.response;
 
   const body = await req.json().catch(() => ({}));
 
@@ -59,7 +59,7 @@ export async function PUT(req: NextRequest) {
     delayMs: numOrNull(body.delayMs),
     webhookBaseUrl: str(body.webhookBaseUrl),
     requireOptIn: Boolean(body.requireOptIn),
-    updatedBy: session.user.email ?? "system",
+    updatedBy: gate.user.email ?? "system",
   };
 
   // Secretos: solo se actualizan si viene un valor nuevo (dejar en blanco = conservar).

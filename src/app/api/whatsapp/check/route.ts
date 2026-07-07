@@ -4,11 +4,15 @@
 // y costaba dinero. Ahora solo valida formato/tipo.
 import { NextRequest, NextResponse } from "next/server";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
+import { requireAuth } from "@/src/lib/authz";
 
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
   try {
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
+
     const { phone, country } = await req.json().catch(() => ({}));
 
     if (!phone || typeof phone !== "string") {

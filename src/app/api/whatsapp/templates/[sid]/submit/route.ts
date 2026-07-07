@@ -2,7 +2,7 @@
 // Envía una plantilla a aprobación de WhatsApp y persiste el estado local.
 import { NextRequest, NextResponse } from "next/server";
 import { contentFetch } from "@/src/lib/twilio-content";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 
 export const runtime = "nodejs";
@@ -13,8 +13,8 @@ function isCustomError(obj: unknown): obj is CustomError {
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ sid: string }> }) {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ ok: false, error: "UNAUTHORIZED" }, { status: 401 });
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     try {
         const { sid } = await params;
@@ -27,9 +27,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sid
             body: JSON.stringify({ name: name ?? "mi_template_whatsapp", category: cat }),
         });
 
-        // Persistir el estado local (queda pendiente hasta que WhatsApp lo apruebe/rechace)
+        // Persistir SOLO el estado (pendiente). NO se guarda la categoría enviada por el
+        // cliente: la categoría autoritativa la fija la sincronización de approvals con
+        // el valor real de WhatsApp (evita evadir el gate de plantillas MARKETING).
         await prisma.twilioContentTemplate
-            .updateMany({ where: { sid }, data: { approvalStatus: "pending", category: cat } })
+            .updateMany({ where: { sid }, data: { approvalStatus: "pending" } })
             .catch(() => {});
 
         return NextResponse.json({ ok: true, approval: resp });

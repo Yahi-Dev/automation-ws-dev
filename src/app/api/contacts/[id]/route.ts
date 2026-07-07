@@ -1,4 +1,5 @@
 import prisma from '@/src/lib/prisma';
+import { requireAuth } from '@/src/lib/authz';
 import { CatchError } from '@/src/utils/catchError';
 import { HttpResponse } from '@/src/utils/httpResponse';
 import { NextRequest } from 'next/server';
@@ -8,6 +9,9 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const gate = await requireAuth(request);
+    if ("response" in gate) return gate.response;
+
     const { id } = await params;
     const contactId = Number.parseInt(id);
 

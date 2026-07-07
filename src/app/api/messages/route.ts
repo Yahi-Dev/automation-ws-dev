@@ -1,6 +1,7 @@
 // src/app/api/messages/route.ts (versión corregida)
 import { messageCreateSchema, messageUpdateSchema } from "@/src/features/messages/schema/validations"
 import { auth } from "@/src/lib/auth"
+import { requireAuth } from "@/src/lib/authz"
 import prisma from "@/src/lib/prisma"
 import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
@@ -84,6 +85,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
+
     const body = await req.json();
     const parsed = messageCreateSchema.safeParse(body);
 
@@ -96,7 +100,7 @@ export async function POST(req: Request) {
       });
     }
 
-    const session = await auth.api.getSession({ headers: req.headers });
+    const actor = gate.user.email ?? "desconocido";
     const data = parsed.data;
     // Crear múltiples mensajes (uno por cada contacto)
     const [createdMessages, createError] = await CatchError(
@@ -105,7 +109,7 @@ export async function POST(req: Request) {
           postId: data.postId,
           contactId: contactId,
           status: 'pending',
-          createdBy: session?.user?.email ?? "desconocido",
+          createdBy: actor,
           createdAt: new Date(),
         }))
       })
@@ -129,6 +133,9 @@ export async function POST(req: Request) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const gate = await requireAuth(request);
+    if ("response" in gate) return gate.response;
+
     const { searchParams } = new URL(request.url);
     const id = Number(searchParams.get('id'));
 
@@ -148,8 +155,6 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const session = await auth.api.getSession({ headers: request.headers });
-
     const data = parsed.data;
     const [updated, updateError] = await CatchError(
       prisma.message.update({
@@ -158,7 +163,7 @@ export async function PUT(request: NextRequest) {
           ...data,
           ...(data.sentAt && { sentAt: new Date(data.sentAt) }),
           updatedAt: new Date(),
-          updatedBy: session?.user?.email ?? "desconocido",
+          updatedBy: gate.user.email ?? "desconocido",
         },
         include: {
           post: {
@@ -203,6 +208,9 @@ export async function PUT(request: NextRequest) {
 
 export async function DELETE(request: NextRequest) {
   try {
+    const gate = await requireAuth(request);
+    if ("response" in gate) return gate.response;
+
     const { searchParams } = new URL(request.url);
     const idParam = searchParams.get('id');
     const id = idParam !== null ? Number(idParam) : null;

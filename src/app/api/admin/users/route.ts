@@ -1,7 +1,7 @@
 // src/app/api/admin/users/route.ts
 // Lista usuarios para el panel de administración (solo rol admin).
 import { NextRequest } from "next/server";
-import { auth } from "@/src/lib/auth";
+import { requireAdmin } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { parsePagination } from "@/src/lib/pagination";
@@ -9,10 +9,8 @@ import { parsePagination } from "@/src/lib/pagination";
 export const runtime = "nodejs";
 
 export async function GET(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  const role = (session?.user as { role?: string } | undefined)?.role;
-  if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
-  if (role !== "admin") return HttpResponse.sendForbidden("Requiere rol de administrador");
+  const gate = await requireAdmin(req);
+  if ("response" in gate) return gate.response;
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status")?.trim();

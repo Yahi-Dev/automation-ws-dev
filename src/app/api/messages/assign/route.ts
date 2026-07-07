@@ -1,5 +1,5 @@
 // src/app/api/messages/assign/route.ts
-import { auth } from "@/src/lib/auth"
+import { requireAuth } from "@/src/lib/authz"
 import prisma from "@/src/lib/prisma"
 import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
@@ -9,14 +9,15 @@ const CACHE_KEY = "messages-cache";
 
 export async function POST(req: Request) {
   try {
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
+
     const body = await req.json();
     const { postId, contactIds } = body;
 
     if (!postId || !contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return HttpResponse.sendBadRequest('Datos inválidos para la asignación');
     }
-
-    const session = await auth.api.getSession({ headers: req.headers });
 
     // Verificar que el post existe
     const [post, postError] = await CatchError(
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
           postId: postId,
           contactId: contactId,
           status: 'pending',
-          createdBy: session?.user?.email ?? "desconocido",
+          createdBy: gate.user.email ?? "desconocido",
           createdAt: new Date(),
         }))
       })

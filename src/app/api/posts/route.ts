@@ -1,6 +1,6 @@
 // src/app/api/posts/route.ts
 import { postCreateSchema, postUpdateSchema } from "@/src/features/posts/schema/validations"
-import { auth } from "@/src/lib/auth"
+import { requireAuth } from "@/src/lib/authz"
 import prisma from "@/src/lib/prisma"
 import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
@@ -25,6 +25,9 @@ function serverError(msg: string, error?: unknown) {
 
 export async function GET(req: Request) {
   try {
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
+
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search')?.trim() || ''
     const { limit } = parsePagination(searchParams)
@@ -81,6 +84,9 @@ export async function GET(req: Request) {
 
 export async function POST(req: Request) {
   try {
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
+
     const body = await req.json();
     const parsed = postCreateSchema.safeParse(body);
 
@@ -93,14 +99,13 @@ export async function POST(req: Request) {
       });
     }
 
-    const session = await auth.api.getSession({ headers: req.headers });
     const data = parsed.data;
     const [created, createError] = await CatchError(
       prisma.posts.create({
         data: {
           schedule: new Date(data.schedule),
           text: data.text,
-          createdBy: session?.user?.email ?? "desconocido",
+          createdBy: gate.user.email ?? "desconocido",
           createdAt: new Date(),
           contentTemplateId: data.contentTemplateId ?? "N/A",
           images: {
@@ -135,6 +140,9 @@ export async function POST(req: Request) {
 
 export async function PUT(request: NextRequest) {
   try {
+    const gate = await requireAuth(request);
+    if ("response" in gate) return gate.response;
+
     const { searchParams } = new URL(request.url);
     const id = Number(searchParams.get('id'));
 
@@ -154,12 +162,10 @@ export async function PUT(request: NextRequest) {
       });
     }
 
-    const session = await auth.api.getSession({ headers: request.headers });
-
     const user = {
-      name: session?.user?.name ?? "",
-      email: session?.user?.email ?? "",
-      avatar: session?.user?.image ?? "",
+      name: gate.user.name ?? "",
+      email: gate.user.email ?? "",
+      avatar: gate.user.image ?? "",
     };
 
     const data = parsed.data;
@@ -263,6 +269,9 @@ export async function PUT(request: NextRequest) {
 
 export async function  DELETE(req: NextRequest) {
   try {
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
+
     // 1) Validación de id
     const idStr = new URL(req.url).searchParams.get("id");
     const id = Number(idStr);

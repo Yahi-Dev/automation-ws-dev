@@ -2,7 +2,7 @@
 // Crea plantillas en Twilio Content API (y las cachea en DB) y lista las locales.
 import { NextRequest, NextResponse } from "next/server";
 import { contentFetch } from "@/src/lib/twilio-content";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 import { parsePagination } from "@/src/lib/pagination";
 
@@ -25,8 +25,8 @@ function extractError(e: unknown) {
 }
 
 export async function POST(req: NextRequest) {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ success: false, message: "No autorizado" }, { status: 401 });
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     try {
         const input = await req.json();
@@ -81,8 +81,8 @@ export async function POST(req: NextRequest) {
 
 // Lista las plantillas locales (con su estado de aprobación) para la UI.
 export async function GET(req: NextRequest) {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return NextResponse.json({ success: false, message: "No autorizado" }, { status: 401 });
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     try {
         const { limit } = parsePagination(new URL(req.url).searchParams);

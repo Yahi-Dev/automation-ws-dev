@@ -4,7 +4,7 @@
 import { NextRequest } from "next/server";
 import Papa from "papaparse";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
-import { auth } from "@/src/lib/auth";
+import { requireAuth } from "@/src/lib/authz";
 import prisma from "@/src/lib/prisma";
 import { redis } from "@/src/lib/redis";
 import { HttpResponse } from "@/src/utils/httpResponse";
@@ -23,8 +23,8 @@ function pick(row: Record<string, string>, keys: string[]): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     const form = await req.formData();
     const file = form.get("file");
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
       return HttpResponse.sendBadRequest("El archivo no tiene filas válidas");
     }
 
-    const actor = session.user.email ?? "system";
+    const actor = gate.user.email ?? "system";
     const errors: Array<{ row: number; error: string }> = [];
     const seenPhones = new Set<string>();
     const toInsert: {

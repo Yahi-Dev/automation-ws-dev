@@ -1,7 +1,7 @@
 // src/app/api/settings/test/route.ts
 // Prueba la conexión con Twilio usando la config actual (DB/env).
 import { NextRequest } from "next/server";
-import { auth } from "@/src/lib/auth";
+import { requireAdmin } from "@/src/lib/authz";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { getTwilioClientFromConfig } from "@/src/lib/twilio";
 import { getTwilioConfig, clearTwilioConfigCache } from "@/src/lib/app-config";
@@ -9,8 +9,8 @@ import { getTwilioConfig, clearTwilioConfigCache } from "@/src/lib/app-config";
 export const runtime = "nodejs";
 
 export async function POST(req: NextRequest) {
-  const session = await auth.api.getSession({ headers: req.headers });
-  if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+  const gate = await requireAdmin(req);
+  if ("response" in gate) return gate.response;
 
   try {
     clearTwilioConfigCache();
