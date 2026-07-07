@@ -4,6 +4,7 @@ import { NextRequest } from "next/server";
 import { auth } from "@/src/lib/auth";
 import prisma from "@/src/lib/prisma";
 import { HttpResponse } from "@/src/utils/httpResponse";
+import { parsePagination } from "@/src/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -15,6 +16,7 @@ export async function GET(req: NextRequest) {
 
   const { searchParams } = new URL(req.url);
   const status = searchParams.get("status")?.trim();
+  const { limit } = parsePagination(searchParams);
 
   const users = await prisma.user.findMany({
     where: {
@@ -23,6 +25,7 @@ export async function GET(req: NextRequest) {
     },
     select: { id: true, name: true, email: true, status: true, role: true, phone: true, createdAt: true },
     orderBy: { createdAt: "desc" },
+    take: limit,
   });
 
   return HttpResponse.sendSuccess({ Data: users, Total: users.length }, "Usuarios obtenidos");

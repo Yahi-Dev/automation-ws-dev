@@ -13,6 +13,7 @@ export interface AdminUser {
 export async function getUsers(status?: string): Promise<AdminUser[]> {
   const url = new URL("/api/admin/users", window.location.origin);
   if (status) url.searchParams.set("status", status);
+  url.searchParams.set("limit", "500"); // usuarios administrables: una sola página acotada
   const res = await fetch(url.toString());
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.message || "Error al cargar usuarios");

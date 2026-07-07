@@ -2,9 +2,10 @@
 import { postCreateSchema, postUpdateSchema } from "@/src/features/posts/schema/validations"
 import { auth } from "@/src/lib/auth"
 import prisma from "@/src/lib/prisma"
-import { getOrSetCache, redis } from "@/src/lib/redis"
+import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
 import { HttpResponse } from "@/src/utils/httpResponse"
+import { parsePagination } from "@/src/lib/pagination"
 import { Prisma } from "@prisma/client"
 import { NextRequest, NextResponse } from "next/server"
 
@@ -26,6 +27,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search')?.trim() || ''
+    const { limit } = parsePagination(searchParams)
 
     const where: Prisma.postsWhereInput = {
       isDeleted: false,
@@ -52,6 +54,7 @@ export async function GET(req: Request) {
           }
         },
         orderBy: { schedule: 'desc' },
+        take: limit,
       })
     );
 
@@ -60,14 +63,13 @@ export async function GET(req: Request) {
       return serverError('Error al obtener los posts', error);
     }
 
-    const data = await getOrSetCache(CACHE_KEY, async () => {
-      return posts ?? [];
-    });
+    // Sin caché de clave fija: el listado varía por búsqueda y ya está acotado por take.
+    const data = posts ?? [];
 
     return HttpResponse.sendSuccess(
       {
-        Data: data ?? [],
-        Total: data?.length ?? 0
+        Data: data,
+        Total: data.length
       },
       'Posts obtenidos exitosamente'
     );

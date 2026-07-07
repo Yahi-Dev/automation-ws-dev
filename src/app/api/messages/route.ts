@@ -5,6 +5,7 @@ import prisma from "@/src/lib/prisma"
 import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
 import { HttpResponse } from "@/src/utils/httpResponse"
+import { parsePagination, keysetArgs } from "@/src/lib/pagination"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 
@@ -20,6 +21,7 @@ export async function GET(req: Request) {
     const status = searchParams.get('status')?.trim()
     const postId = searchParams.get('postId') ? Number.parseInt(searchParams.get('postId')!) : undefined
     const contactId = searchParams.get('contactId') ? Number.parseInt(searchParams.get('contactId')!) : undefined
+    const { limit, cursor } = parsePagination(searchParams)
 
     const where: Prisma.messageWhereInput = {
       isDeleted: false,
@@ -57,7 +59,7 @@ export async function GET(req: Request) {
             }
           }
         },
-        orderBy: { createdAt: 'desc' },
+        ...keysetArgs(limit, cursor),
       })
     );
 

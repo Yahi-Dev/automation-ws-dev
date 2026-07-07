@@ -1,5 +1,6 @@
 import { ContactFormValues } from "../schema/validations";
 import { ContactsType } from "../types";
+import { fetchAllPages } from "@/src/lib/fetch-all-pages";
 
 export interface ContactsResponse {
   success: boolean;
@@ -47,18 +48,14 @@ export async function getAllContacts(params?: {
       }
     }
 
-    const response = await fetch(url.toString());
-
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    // Paginación keyset transparente: trae todas las páginas acotadas y entrega
+    // el arreglo completo a la UI (misma forma de siempre, sin cambios visuales).
+    const data = await fetchAllPages<ContactsType>(url);
 
     return {
       success: true,
       message: "Contactos obtenidos correctamente",
-      data: result.data || result.items || result
+      data
     };
   } catch (error) {
     console.error("Error al obtener contactos:", error);

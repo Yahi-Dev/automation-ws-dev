@@ -1,9 +1,10 @@
 import { contactCreateSchema, contactUpdateSchema } from "@/src/features/contacts/schema/validations"
 import { auth } from "@/src/lib/auth"
 import prisma from "@/src/lib/prisma"
-import { getOrSetCache, redis } from "@/src/lib/redis"
+import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
 import { HttpResponse } from "@/src/utils/httpResponse"
+import { parsePagination, keysetArgs } from "@/src/lib/pagination"
 import { Prisma } from "@prisma/client"
 import { NextRequest } from "next/server"
 
@@ -13,6 +14,7 @@ export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search')?.trim() || ''
+    const { limit, cursor } = parsePagination(searchParams)
 
     const where: Prisma.contactsWhereInput = {
       isDeleted: false,
@@ -32,7 +34,7 @@ export async function GET(req: Request) {
         include: {
           _count: { select: { messages: true } }, // 👈 contador por relación
         },
-        orderBy: { createdAt: 'desc' },
+        ...keysetArgs(limit, cursor),
       })
     );
 
@@ -41,17 +43,16 @@ export async function GET(req: Request) {
       return HttpResponse.sendServerError('Error al obtener los contactos', error);
     }
 
-    const data = await getOrSetCache(CACHE_KEY, async () => {
-      return contacts?.map(c => ({
-        ...c,
-        messagesCount: c._count?.messages ?? 0,
-      })) ?? [];
-    });
+    // Sin caché de clave fija: el listado varía por búsqueda/cursor y ya está acotado.
+    const data = (contacts ?? []).map(c => ({
+      ...c,
+      messagesCount: c._count?.messages ?? 0,
+    }));
 
     return HttpResponse.sendSuccess(
       {
-        Data: data ?? [],
-        Total: data?.length ?? 0,
+        Data: data,
+        Total: data.length,
       },
       'Contactos obtenidos exitosamente'
     );

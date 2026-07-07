@@ -4,6 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { contentFetch } from "@/src/lib/twilio-content";
 import { auth } from "@/src/lib/auth";
 import prisma from "@/src/lib/prisma";
+import { parsePagination } from "@/src/lib/pagination";
 
 export const runtime = "nodejs";
 
@@ -84,8 +85,10 @@ export async function GET(req: NextRequest) {
     if (!session?.user) return NextResponse.json({ success: false, message: "No autorizado" }, { status: 401 });
 
     try {
+        const { limit } = parsePagination(new URL(req.url).searchParams);
         const list = await prisma.twilioContentTemplate.findMany({
             orderBy: { createdAt: "desc" },
+            take: limit,
             select: {
                 id: true,
                 sid: true,

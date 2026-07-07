@@ -80,6 +80,8 @@ export async function getAllPosts(params?: {
     if (params?.search) {
       url.searchParams.append("search", params.search);
     }
+    // Posts (campañas) son pocos y se ordenan por schedule: una sola página acotada.
+    url.searchParams.set("limit", "500");
 
     const response = await fetch(url.toString());
 

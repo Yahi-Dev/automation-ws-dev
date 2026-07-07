@@ -1,6 +1,7 @@
 // src/features/messages/services/messages-service.ts
 import { MessageFormValues, MessageUpdateValues } from "../schema/validations";
 import { MessageType, MessageWithRelations } from "../types";
+import { fetchAllPages } from "@/src/lib/fetch-all-pages";
 
 export interface MessagesResponse {
   success: boolean;
@@ -53,18 +54,14 @@ export async function getAllMessages(params?: {
       url.searchParams.append("contactId", params.contactId.toString());
     }
 
-    const response = await fetch(url.toString());
-    
-    if (!response.ok) {
-      throw new Error(`Error ${response.status}: ${response.statusText}`);
-    }
+    // Paginación keyset transparente: trae todas las páginas acotadas y entrega
+    // el arreglo completo a la UI (misma forma de siempre, sin cambios visuales).
+    const data = await fetchAllPages<MessageWithRelations>(url);
 
-    const result = await response.json();
-    
     return {
       success: true,
       message: "Mensajes obtenidos correctamente",
-      data: result.data
+      data
     };
   } catch (error) {
     console.error("Error al obtener mensajes:", error);

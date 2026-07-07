@@ -12,7 +12,7 @@ export interface TemplateItem {
 }
 
 export async function getTemplates(): Promise<TemplateItem[]> {
-  const res = await fetch("/api/whatsapp/templates");
+  const res = await fetch("/api/whatsapp/templates?limit=500");
   const json = await res.json();
   if (!res.ok || !json.success) throw new Error(json.message || json.error || "Error al cargar plantillas");
   return (json.list ?? []) as TemplateItem[];
