@@ -44,6 +44,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sid
             if ("details" in e) details = e.details;
             if (typeof e.status === "number") status = e.status;
         }
-        return NextResponse.json({ ok: false, error: message, details }, { status });
+        const body = process.env.NODE_ENV === "production"
+            ? { ok: false, error: message }
+            : { ok: false, error: message, details };
+        return NextResponse.json(body, { status });
     }
 }

@@ -47,6 +47,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ sid:
             details = (e as CustomError).details;
             status = (e as CustomError).status || 500;
         }
-        return NextResponse.json({ ok: false, error: message, details }, { status });
+        const body = process.env.NODE_ENV === "production"
+            ? { ok: false, error: message }
+            : { ok: false, error: message, details };
+        return NextResponse.json(body, { status });
     }
 }

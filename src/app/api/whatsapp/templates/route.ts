@@ -75,7 +75,11 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ success: true, template: saved }, { status: 201 });
     } catch (e: unknown) {
         const { message, details, status } = extractError(e);
-        return NextResponse.json({ success: false, error: message, details }, { status });
+        // No exponer 'details' internos en producción (posible fuga de info).
+        const body = process.env.NODE_ENV === "production"
+            ? { success: false, error: message }
+            : { success: false, error: message, details };
+        return NextResponse.json(body, { status });
     }
 }
 
