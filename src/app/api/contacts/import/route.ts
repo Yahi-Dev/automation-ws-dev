@@ -12,6 +12,8 @@ import { HttpResponse } from "@/src/utils/httpResponse";
 export const runtime = "nodejs";
 
 const CONTACTS_CACHE_KEY = "contacts-cache";
+const MAX_IMPORT_BYTES = Math.max(1, Number(process.env.CONTACTS_IMPORT_MAX_BYTES ?? 5 * 1024 * 1024));
+const MAX_IMPORT_ROWS = Math.max(1, Number(process.env.CONTACTS_IMPORT_MAX_ROWS ?? 50_000));
 
 /** Toma el valor de la primera columna cuyo encabezado coincida (case-insensitive). */
 function pick(row: Record<string, string>, keys: string[]): string {
@@ -30,6 +32,13 @@ export async function POST(req: NextRequest) {
     const file = form.get("file");
     if (!(file instanceof File)) return HttpResponse.sendBadRequest("Archivo requerido");
 
+    // Tope de tamaño ANTES de leer a memoria (evita agotamiento de memoria).
+    if (file.size > MAX_IMPORT_BYTES) {
+      return HttpResponse.sendBadRequest(
+        `El archivo supera el máximo permitido (${Math.floor(MAX_IMPORT_BYTES / (1024 * 1024))}MB)`
+      );
+    }
+
     const text = await file.text();
     const parsed = Papa.parse<Record<string, string>>(text, {
       header: true,
@@ -38,6 +47,11 @@ export async function POST(req: NextRequest) {
     const rows = parsed.data ?? [];
     if (rows.length === 0) {
       return HttpResponse.sendBadRequest("El archivo no tiene filas válidas");
+    }
+    if (rows.length > MAX_IMPORT_ROWS) {
+      return HttpResponse.sendBadRequest(
+        `Demasiadas filas (${rows.length}). Máximo permitido: ${MAX_IMPORT_ROWS}. Divide el archivo.`
+      );
     }
 
     const actor = gate.user.email ?? "system";

@@ -35,8 +35,14 @@ export async function sendPostMessages(
   opts?: { batchSize?: number; delayMs?: number; includeSent?: boolean; requireOptIn?: boolean }
 ): Promise<SendPostOutcome> {
   const cfg = await getTwilioConfig();
-  const batchSize = Math.max(1, Number(opts?.batchSize ?? cfg.batchSize));
-  const delayMs = Math.max(0, Number(opts?.delayMs ?? cfg.delayMs));
+  // Clamp server-side: el cliente NO puede desactivar el throttle ni disparar lotes
+  // gigantes (evita abuso de credito Twilio / suspension de cuenta). Configurable por env.
+  const MAX_BATCH = Math.max(1, Number(process.env.WHATSAPP_MAX_BATCH_SIZE ?? 100));
+  const MIN_DELAY = Math.max(0, Number(process.env.WHATSAPP_MIN_DELAY_MS ?? 200));
+  const reqBatch = Number(opts?.batchSize ?? cfg.batchSize) || 1;
+  const reqDelay = Number(opts?.delayMs ?? cfg.delayMs) || 0;
+  const batchSize = Math.min(MAX_BATCH, Math.max(1, reqBatch));
+  const delayMs = Math.max(MIN_DELAY, reqDelay);
   const includeSent = Boolean(opts?.includeSent);
   const requireOptIn = opts?.requireOptIn ?? cfg.requireOptIn;
 

@@ -51,7 +51,10 @@ export async function getTwilioConfig(): Promise<TwilioConfig> {
     delayMs: s?.delayMs ?? Number(env.WHATSAPP_SEND_DELAY_MS ?? 1000),
     webhookBaseUrl: s?.webhookBaseUrl || env.WHATSAPP_WEBHOOK_BASE_URL,
     webhookSecret: decryptSecret(s?.webhookSecretEnc) || env.WHATSAPP_WEBHOOK_SECRET,
-    requireOptIn: s?.requireOptIn ?? env.WHATSAPP_REQUIRE_OPT_IN === "true",
+    // Fail-safe de consentimiento: por defecto TRUE (no enviar a quien no dio opt-in).
+    // Solo aplica si no hay ajuste en app_settings; se puede desactivar con
+    // WHATSAPP_REQUIRE_OPT_IN=false o desde Configuración (admin).
+    requireOptIn: s?.requireOptIn ?? env.WHATSAPP_REQUIRE_OPT_IN !== "false",
   };
 
   cache = { value, at: Date.now() };
