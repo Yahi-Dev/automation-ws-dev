@@ -18,7 +18,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ sid
 
     try {
         const { sid } = await params;
-        const { name, category } = await req.json();
+
+        // Mismo motivo que en approvals: el sid se interpola en la URL de la
+        // Content API, que viaja con las credenciales de Twilio en la cabecera.
+        if (!/^HX[0-9a-fA-F]{32}$/.test(sid)) {
+            return NextResponse.json(
+                { ok: false, error: "Identificador de plantilla no válido" },
+                { status: 400 }
+            );
+        }
+
+        const { name, category } = await req.json().catch(() => ({}));
         const cat = String(category ?? "UTILITY").toUpperCase();
 
         // Twilio: POST /Content/{ContentSid}/ApprovalRequests/whatsapp con { name, category }

@@ -3,6 +3,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { contentFetch } from "@/src/lib/twilio-content";
 import { requireAuth } from "@/src/lib/authz";
+import { enforceApiLimit } from "@/src/lib/api-rate-limit";
+import { templateCreateSchema } from "@/src/features/templates/schema/validations";
 import prisma from "@/src/lib/prisma";
 import { parsePagination } from "@/src/lib/pagination";
 
@@ -28,17 +30,33 @@ export async function POST(req: NextRequest) {
     const gate = await requireAuth(req);
     if ("response" in gate) return gate.response;
 
+    // Cada plantilla creada consume cuota de la Content API y queda registrada
+    // de forma permanente en la cuenta de Twilio del cliente.
+    const limite = await enforceApiLimit("templates-create", gate.user.email ?? "system");
+    if (limite) return limite;
+
     try {
-        const input = await req.json();
-        if (!input?.types || typeof input.types !== "object") {
-            return NextResponse.json({ success: false, message: "types inválido" }, { status: 400 });
+        const input = await req.json().catch(() => ({}));
+        const parsed = templateCreateSchema.safeParse(input);
+
+        if (!parsed.success) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Datos de plantilla inválidos",
+                    errors: parsed.error.flatten(),
+                },
+                { status: 400 }
+            );
         }
 
+        // `payload` sale del esquema, no del cuerpo crudo: nada que no este
+        // declarado en templateCreateSchema llega a la Content API de Twilio.
         const payload = {
-            friendly_name: input.friendly_name ?? "mi_template",
-            language: input.language ?? "es",
-            variables: input.variables ?? { "1": "Cliente" },
-            types: input.types,
+            friendly_name: parsed.data.friendly_name,
+            language: parsed.data.language,
+            variables: parsed.data.variables,
+            types: parsed.data.types,
         };
 
         // 1) Crear en Twilio Content API

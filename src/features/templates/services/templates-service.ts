@@ -29,7 +29,7 @@ export async function submitForApproval(sid: string, name: string, category: str
 }
 
 export async function refreshApproval(sid: string): Promise<string | undefined> {
-  const res = await fetch(`/api/whatsapp/templates/${sid}/approvals`);
+  const res = await fetch(`/api/whatsapp/templates/${sid}/approvals`, { method: "POST" });
   const json = await res.json();
   if (!res.ok || !json.ok) throw new Error(json.error || "Error al consultar el estado");
   return json.status as string | undefined;

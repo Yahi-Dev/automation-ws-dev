@@ -9,7 +9,12 @@ import { getTwilioConfig } from "@/src/lib/app-config";
 import { isValidTwilioSignature, formToParams } from "@/src/lib/twilio-webhook";
 import { safeEqual } from "@/src/lib/safe-compare";
 
+import { yaProcesado } from "@/src/lib/webhook-replay";
+
 export const runtime = "nodejs";
+
+/** Tope de tamano del cuerpo entrante de Twilio. */
+const MAX_BODY_BYTES = 64 * 1024;
 
 const CONTACTS_CACHE_KEY = "contacts-cache";
 
@@ -40,6 +45,13 @@ export async function POST(req: NextRequest) {
       if (!safeEqual(token, webhookSecret)) return new NextResponse("Forbidden", { status: 403 });
     }
 
+    // Tope de tamano ANTES de parsear: formData() bufferiza el cuerpo entero y
+    // esta ruta no tiene rate-limit (la llama Twilio, no un usuario).
+    const declarado = Number(req.headers.get("content-length") ?? 0);
+    if (declarado > MAX_BODY_BYTES) {
+      return new NextResponse("Payload too large", { status: 413 });
+    }
+
     const form = await req.formData();
 
     // Validación de firma (opt-in): rechaza peticiones no firmadas por Twilio.
@@ -57,6 +69,13 @@ export async function POST(req: NextRequest) {
     const contact = await findContactByPhone(from);
     if (!contact) return twiml(); // remitente desconocido: ignorar
 
+    // ANTI-REPLAY: la firma de Twilio no lleva marca temporal ni nonce, asi que
+    // una peticion capturada se puede reenviar indefinidamente. Sin esto, un
+    // replay de un "ALTA" antiguo podia REVERTIR una baja posterior.
+    const sid = String(form.get("MessageSid") ?? form.get("SmsMessageSid") ?? "");
+    const claveEvento = sid ? `inbound:${sid}` : `inbound:${from}:${type}:${body.slice(0, 40)}`;
+    if (await yaProcesado(claveEvento)) return twiml();
+
     await applyConsent({
       contactId: contact.id,
       event: type,
@@ -73,7 +92,10 @@ export async function POST(req: NextRequest) {
     return twiml(reply);
   } catch (error) {
     console.error("Inbound webhook error:", error);
-    // 200 para que Twilio no reintente en bucle por errores nuestros.
-    return twiml();
+    // 500, NO 200. Antes se respondia 200 ante cualquier excepcion propia, con
+    // lo que una caida de la base de datos hacia que Twilio diera por entregada
+    // una BAJA que nunca se registro: el contacto seguia recibiendo mensajes y
+    // no quedaba ningun rastro. Con 5xx, Twilio reintenta.
+    return new NextResponse("Internal error", { status: 500 });
   }
 }

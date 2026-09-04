@@ -27,6 +27,10 @@ export async function applyWebhookStatus(evt: WebhookStatusEvent): Promise<Apply
 
   const status = mapTwilioStatus(rawStatus);
 
+  // Estado que Twilio no documenta: se ignora en lugar de escribirlo crudo.
+  // Antes acababa en `message.status` saltandose el guard anti-retroceso.
+  if (status === null) return "skipped";
+
   const message = await prisma.message.findFirst({
     where: { providerSid: messageSid },
     select: { id: true, status: true },
@@ -61,6 +65,10 @@ export async function applyWebhookStatus(evt: WebhookStatusEvent): Promise<Apply
 
   await prisma.message.update({ where: { id: message.id }, data });
   await redis.del(MESSAGES_CACHE_KEY).catch(() => {});
+  // El detalle del mensaje se cachea 300 s con la clave `message-<id>`, y aqui
+  // no se invalidaba: la pantalla de detalle mostraba el estado ANTERIOR hasta
+  // cinco minutos despues de que Twilio confirmara la entrega.
+  await redis.del(`message-${message.id}`).catch(() => {});
   await bumpCacheVersion("dashboard").catch(() => {}); // refresca métricas cacheadas
   return "updated";
 }

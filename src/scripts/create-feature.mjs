@@ -45,7 +45,7 @@ try {
   console.log(`Carpeta creada en app: ${appPath}`);
 
   // Archivo page.tsx con el nuevo template
-  const pageTemplate = `import { AppLayout } from '@/src/components/AppLayout';\nimport React from 'react';\n\n\nconst breadcrumbs = [\n  { title: '${featureName.charAt(0).toUpperCase() + featureName.slice(1)}', href: '#' },\n];\n\nconst ${featureName.charAt(0).toUpperCase() + featureName.slice(1)}Page = () => {\n  return (\n    <AppLayout breadcrumbs={breadcrumbs}>\n      <div className="p-4">\n        <h1 className="text-2xl font-bold">${featureName.charAt(0).toUpperCase() + featureName.slice(1)} Page</h1>\n        <p>Content for the ${featureName.toLowerCase()} page goes here.</p>\n      </div>\n    </AppLayout>\n  );\n};\n\nexport default ${featureName.charAt(0).toUpperCase() + featureName.slice(1)}Page;\n`;
+  const pageTemplate = `import { AppLayout } from '@/src/components/AppLayout';\nimport { verifyAuth } from '@/src/hooks/use-auth';\nimport React from 'react';\n\n\nconst breadcrumbs = [\n  { title: '${featureName.charAt(0).toUpperCase() + featureName.slice(1)}', href: '#' },\n];\n\nconst ${featureName.charAt(0).toUpperCase() + featureName.slice(1)}Page = async () => {\n  await verifyAuth();\n\n  return (\n    <AppLayout breadcrumbs={breadcrumbs}>\n      <div className="p-4">\n        <h1 className="text-2xl font-bold">${featureName.charAt(0).toUpperCase() + featureName.slice(1)} Page</h1>\n        <p>Content for the ${featureName.toLowerCase()} page goes here.</p>\n      </div>\n    </AppLayout>\n  );\n};\n\nexport default ${featureName.charAt(0).toUpperCase() + featureName.slice(1)}Page;\n`;
 
   const pageFilePath = path.join(appPath, 'page.tsx');
   fs.writeFileSync(pageFilePath, pageTemplate);
@@ -56,7 +56,7 @@ try {
   console.log(`Carpeta API creada: ${apiPath}`);
 
   // Archivo route.ts en la carpeta API
-  const routeTemplate = `import { NextResponse } from 'next/server';\n\nexport async function GET() {\n  try {\n    // Lógica para GET\n    return NextResponse.json({ message: 'GET ${featureName} successful' });\n  } catch (error) {\n    return NextResponse.json({ error: 'Error fetching ${featureName}' }, { status: 500 });\n  }\n}\n\nexport async function POST(request: Request) {\n  try {\n    const body = await request.json();\n    // Lógica para POST\n    return NextResponse.json({ message: '${featureName} created successfully', data: body });\n  } catch (error) {\n    return NextResponse.json({ error: 'Error creating ${featureName}' }, { status: 500 });\n  }\n}\n`;
+  const routeTemplate = `import { NextResponse } from 'next/server';\nimport { requireAuth } from '@/src/lib/authz';\n\nexport async function GET(request: Request) {\n  const gate = await requireAuth(request);\n  if ('response' in gate) return gate.response;\n\n  try {\n    // Lógica para GET\n    return NextResponse.json({ message: 'GET ${featureName} successful' });\n  } catch (error) {\n    return NextResponse.json({ error: 'Error fetching ${featureName}' }, { status: 500 });\n  }\n}\n\nexport async function POST(request: Request) {\n  const gate = await requireAuth(request);\n  if ('response' in gate) return gate.response;\n\n  try {\n    const body = await request.json();\n    // Lógica para POST\n    return NextResponse.json({ message: '${featureName} created successfully', data: body });\n  } catch (error) {\n    return NextResponse.json({ error: 'Error creating ${featureName}' }, { status: 500 });\n  }\n}\n`;
 
   const routeFilePath = path.join(apiPath, 'route.ts');
   fs.writeFileSync(routeFilePath, routeTemplate);

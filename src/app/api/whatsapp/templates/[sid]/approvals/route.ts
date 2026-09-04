@@ -9,12 +9,26 @@ export const runtime = "nodejs";
 
 type CustomError = { message: string; details?: unknown; status?: number };
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ sid: string }> }) {
+// POST, no GET: aunque se llame "consultar", ESCRIBE en la base de datos
+// (approvalStatus, category, rejectionReason). Un GET que muta es alcanzable
+// por CSRF de navegacion con cookies SameSite=Lax.
+export async function POST(req: NextRequest, { params }: { params: Promise<{ sid: string }> }) {
     const gate = await requireAuth(req);
     if ("response" in gate) return gate.response;
 
     try {
         const { sid } = await params;
+
+        // El sid se interpola en la URL de la Content API. Sin validar, un valor
+        // con "/../" podia salir del prefijo /Content llevandose la cabecera
+        // Authorization con las credenciales de Twilio.
+        if (!/^HX[0-9a-fA-F]{32}$/.test(sid)) {
+            return NextResponse.json(
+                { ok: false, error: "Identificador de plantilla no válido" },
+                { status: 400 }
+            );
+        }
+
         const approvals = await contentFetch(`/Content/${sid}/ApprovalRequests`);
 
         // Parsear el estado de WhatsApp y persistirlo
@@ -37,7 +51,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ sid:
                 .catch(() => {});
         }
 
-        return NextResponse.json({ ok: true, approvals, status });
+        // No se devuelve `approvals` crudo: era la parte reflejada del SSRF de
+        // contentBaseUrl. La UI solo necesita estos tres campos.
+        return NextResponse.json({
+            ok: true,
+            status,
+            category: wa.category ? String(wa.category).toUpperCase() : null,
+            rejectionReason: wa.rejection_reason ?? null,
+        });
     } catch (e: unknown) {
         let message = "Unknown error";
         let details = undefined;

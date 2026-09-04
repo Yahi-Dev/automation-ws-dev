@@ -32,9 +32,11 @@ async function handle(req: NextRequest) {
   );
 }
 
+// SOLO POST. Antes tambien se exponia por GET, y las cookies de sesion son
+// SameSite=Lax: el navegador SI las envia en una navegacion de nivel superior.
+// Bastaba con que un administrador abriera un enlace preparado para disparar
+// todas las campanas vencidas y quemar credito de Twilio. Los cron externos
+// (y el interno de BullMQ) usan POST sin problema.
 export async function POST(req: NextRequest) {
-  return handle(req);
-}
-export async function GET(req: NextRequest) {
   return handle(req);
 }
