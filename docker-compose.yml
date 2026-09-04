@@ -1,0 +1,127 @@
+# Despliegue completo en una sola máquina: app + worker + MySQL + Redis + TLS.
+#
+# Pensado para un VPS pequeño (2 vCPU / 4-12 GB). Levanta con:
+#   cp .env.example .env   # y rellenar
+#   docker compose up -d --build
+#
+# Reglas que NO hay que romper:
+#   - `TZ` debe ser idéntico en app y worker. Si difieren, el rollup diario del
+#     dashboard escribe con un día y se consulta con otro, devuelve null siempre,
+#     y nadie se entera: el dashboard cae al cálculo en vivo en silencio.
+#   - La suma de DB_CONNECTION_LIMIT de todos los procesos debe ser MENOR que el
+#     max_connections de MySQL. Sin definirlo, Prisma usa (núcleos*2+1) por
+#     proceso, que en una máquina de 32 núcleos son 65 conexiones cada uno.
+
+name: automation-ws
+
+x-comun: &comun
+  restart: unless-stopped
+  env_file: [.env]
+  environment:
+    TZ: ${TZ:-America/Santo_Domingo}
+
+services:
+  mysql:
+    <<: *comun
+    image: mysql:8
+    command:
+      - --max_connections=60
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?define MYSQL_ROOT_PASSWORD en .env}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-automation_ws}
+      MYSQL_USER: ${MYSQL_USER:-automation}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:?define MYSQL_PASSWORD en .env}
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    <<: *comun
+    image: redis:7-alpine
+    # `appendonly` para no perder los trabajos encolados en un reinicio, y
+    # `noeviction` porque BullMQ NO tolera que Redis descarte claves: un job
+    # desalojado es una campaña que desaparece sin dejar rastro.
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --maxmemory-policy
+      - noeviction
+      - --requirepass
+      - ${REDIS_PASSWORD:?define REDIS_PASSWORD en .env}
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    <<: *comun
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      SERVICE_NAME: app
+      # Menos que max_connections/2, para dejar sitio al worker.
+      DB_CONNECTION_LIMIT: ${DB_CONNECTION_LIMIT:-8}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-20}
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    volumes:
+      # Solo se usa si NO hay S3/R2 configurado. Como volumen, sobrevive a los
+      # redespliegues; dentro de la imagen no lo haría.
+      - uploads:/app/public/uploads
+    expose:
+      - "3000"
+
+  worker:
+    <<: *comun
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    environment:
+      TZ: ${TZ:-America/Santo_Domingo}
+      SERVICE_NAME: worker
+      DB_CONNECTION_LIMIT: ${WORKER_DB_CONNECTION_LIMIT:-6}
+      DB_POOL_TIMEOUT: ${DB_POOL_TIMEOUT:-20}
+    depends_on:
+      mysql: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      # Espera a que la app aplique las migraciones antes de tocar la base.
+      app: { condition: service_started }
+    # Margen para el cierre ordenado (WORKER_SHUTDOWN_TIMEOUT_MS = 25 s por
+    # defecto). El valor por defecto de Docker son 10 s, insuficiente: un
+    # SIGKILL a mitad de envío deja mensajes que se reenvían por duplicado.
+    stop_grace_period: 40s
+
+  caddy:
+    <<: *comun
+    image: caddy:2-alpine
+    depends_on:
+      app: { condition: service_started }
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  mysql-data:
+  redis-data:
+  uploads:
+  caddy-data:
+  caddy-config:

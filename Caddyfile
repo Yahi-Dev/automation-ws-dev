@@ -1,0 +1,34 @@
+# TLS automático (Let's Encrypt) y proxy inverso hacia la app.
+#
+# Caddy pide y renueva el certificado solo; no hay que tocar nada mientras el
+# dominio apunte a esta máquina y los puertos 80/443 estén abiertos.
+#
+# Requiere en el .env:
+#   DOMINIO=ws.tudominio.com
+#   EMAIL_TLS=admin@tudominio.com
+
+{
+	email {$EMAIL_TLS}
+}
+
+{$DOMINIO} {
+	encode zstd gzip
+
+	# La app es el único backend. `app` es el nombre del servicio en compose.
+	reverse_proxy app:3000 {
+		# Caddy es el proxy de confianza: la app resuelve la IP real del cliente
+		# a partir de esta cabecera. Coherente con TRUSTED_PROXY_HOPS del .env
+		# (1 si solo hay Caddy; 2 si además hay Cloudflare delante).
+		header_up X-Real-IP {remote_host}
+	}
+
+	# El health check no debe ser público: revela el estado de la base de datos,
+	# de Redis, de la cola y del circuito de Twilio.
+	@salud path /api/health
+	respond @salud 404
+
+	log {
+		output stdout
+		format console
+	}
+}

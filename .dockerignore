@@ -1,0 +1,58 @@
+# Todo lo que NO debe entrar en el contexto de build de Docker.
+#
+# Importante por dos motivos: el contexto se envía entero al daemon (y
+# node_modules pesa cientos de MB), y cualquier archivo copiado acaba dentro de
+# la imagen —incluidos los secretos.
+
+# Secretos: NUNCA dentro de la imagen. Se inyectan por env_file en runtime.
+.env
+.env.*
+!.env.example
+env.url
+*.pem
+*.key
+
+# Dependencias y artefactos: se reinstalan/reconstruyen dentro del build.
+node_modules
+.next
+out
+build
+dist
+*.tsbuildinfo
+
+# Control de versiones y CI
+.git
+.github
+.gitignore
+
+# Archivos subidos por usuarios (van en un volumen, no en la imagen)
+public/uploads
+
+# Pruebas y reportes
+tests
+coverage
+test-results
+playwright-report
+
+# Herramientas locales de desarrollo
+.agents
+.skills
+skills-lock.json
+.claude
+.cursor
+.vscode
+.idea
+
+# Documentación y despliegue (no se necesitan en runtime)
+docs
+README.md
+Dockerfile*
+docker-compose.yml
+Caddyfile
+
+# Logs y temporales
+*.log
+logs
+tmp
+temp
+*.bak
