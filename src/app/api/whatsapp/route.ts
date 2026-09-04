@@ -1,7 +1,8 @@
 // src/app/api/whatsapp/route.ts
 // Envío masivo (broadcast) de una campaña/post a sus contactos asignados.
 import { NextRequest } from "next/server";
-import { requireAuth } from "@/src/lib/authz";
+import { requireAuth, isAdmin } from "@/src/lib/authz";
+import { enforceApiLimit } from "@/src/lib/api-rate-limit";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { sendPostMessages } from "@/src/lib/campaign-send";
 import { queueEnabled, enqueueCampaign } from "@/src/lib/queue";
@@ -33,6 +34,16 @@ export async function POST(req: NextRequest) {
 
     const actor = gate.user.email ?? "system";
 
+    // Esta ruta gasta dinero real por mensaje. Sin limite, 20 peticiones
+    // concurrentes en bucle podian disparar cientos de miles de mensajes/hora.
+    const limite = await enforceApiLimit("whatsapp-send", actor);
+    if (limite) return limite;
+
+    // `includeSent` REENVIA lo ya entregado: es la palanca de amplificacion mas
+    // barata que existe en la app (misma campana, coste multiplicado por N).
+    // Se reserva a administradores; para el resto se ignora en silencio.
+    const includeSent = isAdmin(gate.user) ? Boolean(body?.includeSent) : false;
+
     // --- Camino asíncrono: encolar y responder de inmediato ---
     if (queueEnabled) {
       // Validaciones baratas antes de encolar (evita jobs inútiles).
@@ -40,7 +51,7 @@ export async function POST(req: NextRequest) {
       if (!post) return HttpResponse.sendNotFound("Post no encontrado");
 
       const pendingCount = await prisma.message.count({
-        where: { postId, isDeleted: false, status: { in: body?.includeSent ? ["pending", "failed", "sent", "undelivered"] : ["pending", "failed"] } },
+        where: { postId, isDeleted: false, status: { in: includeSent ? ["pending", "failed", "sent", "undelivered"] : ["pending", "failed"] } },
       });
       if (pendingCount === 0) return HttpResponse.sendBadRequest("No hay mensajes pendientes para este post.");
 
@@ -49,7 +60,7 @@ export async function POST(req: NextRequest) {
         actor,
         batchSize: body?.batchSize,
         delayMs: body?.delayMs,
-        includeSent: body?.includeSent,
+        includeSent,
       });
 
       // data: null a propósito -> la UI muestra el `message` (no cuenta "0 enviados").
@@ -63,7 +74,7 @@ export async function POST(req: NextRequest) {
     const outcome = await sendPostMessages(postId, actor, {
       batchSize: body?.batchSize,
       delayMs: body?.delayMs,
-      includeSent: body?.includeSent,
+      includeSent,
     });
 
     if (!outcome.ok) {

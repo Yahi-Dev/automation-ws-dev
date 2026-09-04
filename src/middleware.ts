@@ -32,7 +32,20 @@ export async function middleware(request: NextRequest) {
   }
 
   const ip = getClientIp(request)
-  if (!ip) return NextResponse.next()
+  if (!ip) {
+    // FALLO CERRADO. Antes se dejaba pasar, y eso convertia "no se pudo
+    // determinar la IP" en "sin limite de intentos": justo el escenario que el
+    // rate-limit debe cubrir. Si esto se dispara, la topologia de red no esta
+    // declarada; se arregla con configuracion, no relajando el gate.
+    console.error(
+      "[rate-limit] No se pudo determinar la IP del cliente. " +
+        "Declara TRUST_PLATFORM_HEADERS=true (si hay Cloudflare o similar delante) " +
+        "o TRUSTED_PROXY_HOPS=N (numero de proxies propios). Peticion bloqueada."
+    )
+    return sendTooManyRequests(
+      "No se pudo verificar el origen de la petición. Inténtalo de nuevo más tarde."
+    )
+  }
 
   try {
     // Login incrementa el contador; el resto solo consulta el estado.
@@ -54,9 +67,13 @@ export async function middleware(request: NextRequest) {
     response.headers.set('X-RateLimit-Reset', rateLimitResult.resetTime.toString())
     return response
   } catch (error) {
-    // Ante un error de rate limiting, permitir el acceso (fail-open).
+    // FALLO CERRADO. Un error del backend de rate-limit (Redis caido, por
+    // ejemplo) no puede traducirse en "adelante, sin limite": seria suficiente
+    // con tumbar Redis para desactivar la proteccion contra fuerza bruta.
     console.error('Error en rate limiting:', error)
-    return NextResponse.next()
+    return sendTooManyRequests(
+      "El servicio de autenticación no está disponible en este momento. Inténtalo de nuevo en unos minutos."
+    )
   }
 }
 

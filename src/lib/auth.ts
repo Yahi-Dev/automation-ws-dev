@@ -48,8 +48,33 @@ export const auth = betterAuth({
     customRules: {
       "/sign-in/email": { window: 60, max: 10 },
       "/sign-up/email": { window: 60, max: 5 },
-      "/forget-password": { window: 3600, max: 5 },
+      // El endpoint real de esta version es "/request-password-reset". La regla
+      // anterior apuntaba a "/forget-password", que no existe: las peticiones de
+      // recuperacion caian en el limite generico (30/min) en vez de en 5/hora.
+      "/request-password-reset": { window: 3600, max: 5 },
       "/reset-password": { window: 3600, max: 10 },
+    },
+  },
+
+  advanced: {
+    // Que cabeceras acepta better-auth para resolver la IP del cliente.
+    // Por defecto recorre una lista amplia, y con `trustedProxies` sin definir
+    // acepta cualquier cabecera de valor unico: eso permitia rotar la IP en cada
+    // intento y saltarse el rate-limit nativo, igual que ocurria en el middleware.
+    //
+    // Se mantiene alineado con src/lib/client-ip.ts: solo se confia en las
+    // cabeceras de plataforma cuando el entorno declara que hay un proxy delante.
+    ipAddress: {
+      ipAddressHeaders:
+        process.env.TRUST_PLATFORM_HEADERS === "true"
+          ? ["cf-connecting-ip", "x-real-ip", "x-forwarded-for"]
+          : ["x-forwarded-for"],
+      // IPs o rangos CIDR de los proxies propios, separados por coma.
+      // Sin esto, la cadena x-forwarded-for no se puede interpretar con garantias.
+      trustedProxies: (process.env.TRUSTED_PROXY_IPS ?? "")
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean),
     },
   },
 

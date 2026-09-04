@@ -5,6 +5,7 @@ import path from 'path';
 import fs from 'fs';
 import { storageEnabled, putObject } from '@/src/lib/storage';
 import { requireAuth } from '@/src/lib/authz';
+import { enforceApiLimit } from '@/src/lib/api-rate-limit';
 
 // Usa Node APIs (fs/path)
 export const runtime = 'nodejs';
@@ -50,6 +51,10 @@ export async function POST(req: NextRequest) {
   try {
     const gate = await requireAuth(req);
     if ('response' in gate) return gate.response;
+
+    // Sin limite, un usuario aprobado podia llenar el disco a 5 MB por peticion.
+    const limite = await enforceApiLimit('upload', gate.user.email ?? 'system');
+    if (limite) return limite;
 
     const formData = await req.formData();
     const file = formData.get('file') as unknown as File | null;

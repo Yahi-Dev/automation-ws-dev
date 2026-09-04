@@ -2,6 +2,7 @@
 // Prueba la conexión con Twilio usando la config actual (DB/env).
 import { NextRequest } from "next/server";
 import { requireAdmin } from "@/src/lib/authz";
+import { enforceApiLimit } from "@/src/lib/api-rate-limit";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { getTwilioClientFromConfig } from "@/src/lib/twilio";
 import { getTwilioConfig, clearTwilioConfigCache } from "@/src/lib/app-config";
@@ -11,6 +12,9 @@ export const runtime = "nodejs";
 export async function POST(req: NextRequest) {
   const gate = await requireAdmin(req);
   if ("response" in gate) return gate.response;
+
+    const limite = await enforceApiLimit("settings-test", gate.user.email ?? "system");
+    if (limite) return limite;
 
   try {
     clearTwilioConfigCache();

@@ -1,6 +1,6 @@
 // src/app/api/posts/route.ts
 import { postCreateSchema, postUpdateSchema } from "@/src/features/posts/schema/validations"
-import { requireAuth } from "@/src/lib/authz"
+import { requireAuth, ownedWhere } from "@/src/lib/authz"
 import prisma from "@/src/lib/prisma"
 import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
@@ -107,7 +107,11 @@ export async function POST(req: Request) {
           text: data.text,
           createdBy: gate.user.email ?? "desconocido",
           createdAt: new Date(),
-          contentTemplateId: data.contentTemplateId ?? "N/A",
+          // Antes: `?? "N/A"`. "N/A" no es un id valido de
+          // twilio_content_templates, asi que crear una campana sin plantilla
+          // violaba la clave foranea (P2003) y devolvia un 500 opaco.
+          // La columna es opcional: el valor correcto para "sin plantilla" es null.
+          contentTemplateId: data.contentTemplateId || null,
           images: {
             create: data.images?.map((img: { url: string }) => ({
               url: img.url,
@@ -172,8 +176,10 @@ export async function PUT(request: NextRequest) {
 
     // Primero, obtener el post actual para comparar imágenes
     const [currentPost, currentPostError] = await CatchError(
-      prisma.posts.findUnique({
-        where: { id },
+      prisma.posts.findFirst({
+        // Incluye la condicion de propiedad: una campana de otro usuario
+        // responde 404, igual que una inexistente.
+        where: ownedWhere(gate.user, { id }),
         include: { images: true }
       })
     );
@@ -234,7 +240,9 @@ export async function PUT(request: NextRequest) {
 
     const [updated, updateError] = await CatchError(
       prisma.posts.update({
-        where: { id },
+        // La propiedad viaja en la misma sentencia que la escritura; si no
+        // coincide, Prisma lanza P2025 y se responde 404 mas abajo.
+        where: ownedWhere(gate.user, { id }),
         data: updateData,
         include: {
           images: {
@@ -281,8 +289,8 @@ export async function  DELETE(req: NextRequest) {
     }
 
     // 2) Buscar post
-    const post = await prisma.posts.findUnique({
-      where: { id },
+    const post = await prisma.posts.findFirst({
+      where: ownedWhere(gate.user, { id }),
       select: { id: true, isDeleted: true },
     });
 
@@ -301,13 +309,16 @@ export async function  DELETE(req: NextRequest) {
 
     await prisma.$transaction(async (tx) => {
       await tx.imagesPosts.deleteMany({ where: { postId: id } }).catch(() => {});
-      await tx.posts.delete({ where: { id } });
+      await tx.posts.delete({ where: ownedWhere(gate.user, { id }) });
     });
 
     // Cache
     try {
       await redis.del(CACHE_KEY);            // lista general
-      await redis.del(CACHE_KEY_ALL, `post:${id}`); // detalle
+      // El GET del detalle cachea con `post-<id>`; antes aqui se borraba
+      // `post:<id>`, una clave que no se escribe nunca, y la campana borrada
+      // se seguia sirviendo desde cache hasta 5 minutos.
+      await redis.del(CACHE_KEY_ALL, `post-${id}`); // detalle
     } catch (e) {
       console.warn("[POSTS][DELETE] cache del warn", e);
     }

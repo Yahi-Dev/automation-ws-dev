@@ -2,6 +2,7 @@
 // Cambia manualmente el consentimiento de un contacto (opt-in / opt-out) desde la UI.
 import { NextRequest } from "next/server";
 import { requireAuth } from "@/src/lib/authz";
+import { enforceApiLimit } from "@/src/lib/api-rate-limit";
 import prisma from "@/src/lib/prisma";
 import { redis } from "@/src/lib/redis";
 import { CatchError } from "@/src/utils/catchError";
@@ -19,6 +20,9 @@ export async function POST(
   try {
     const gate = await requireAuth(req);
     if ("response" in gate) return gate.response;
+
+    const limite = await enforceApiLimit("consent-write", gate.user.email ?? "system");
+    if (limite) return limite;
 
     const { id } = await params;
     const contactId = Number(id);

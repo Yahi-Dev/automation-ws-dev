@@ -45,3 +45,37 @@ export async function requireAdmin(req: Request): Promise<AuthGate> {
   }
   return gate;
 }
+
+/** Identificador con el que se sella `createdBy`/`updatedBy` en las tablas. */
+export function actorOf(user: SessionUser): string {
+  return user.email ?? "desconocido";
+}
+
+export function isAdmin(user: SessionUser): boolean {
+  return user.role === "admin";
+}
+
+/**
+ * Anade la condicion de PROPIEDAD a un `where` de Prisma.
+ *
+ * Modelo de autorizacion del proyecto:
+ *   - un usuario aprobado LEE todo el espacio de trabajo y CREA libremente;
+ *   - pero solo MODIFICA o BORRA lo que el mismo creo (`createdBy = su correo`);
+ *   - un administrador no tiene esa restriccion.
+ *
+ * Antes de esto, `createdBy` se escribia en cinco sitios y no aparecia en
+ * ninguna clausula `where` del proyecto: cualquier usuario aprobado podia
+ * editar y borrar contactos, campanas y mensajes de cualquier otro.
+ *
+ * Uso previsto con `updateMany`/`deleteMany`, que aplican la comprobacion en la
+ * MISMA sentencia que la escritura (sin ventana de carrera). Si el resultado es
+ * `count === 0`, el recurso no existe o no es del actor: responder 404 en ambos
+ * casos, para no revelar la existencia de recursos ajenos.
+ */
+export function ownedWhere<T extends object>(
+  user: SessionUser,
+  base: T
+): T & { createdBy?: string } {
+  if (isAdmin(user)) return base;
+  return { ...base, createdBy: actorOf(user) };
+}

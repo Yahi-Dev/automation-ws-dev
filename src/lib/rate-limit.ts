@@ -91,11 +91,14 @@ export class RateLimitService {
       }
     } catch (error) {
       console.error('Rate limit check error:', error)
-      // En caso de error, permitir el acceso
+      // FALLO CERRADO: si el backend del rate-limit no responde, no se puede
+      // afirmar que queden intentos. Devolver isBlocked:false convertia una
+      // caida de Redis en "proteccion desactivada", que es exactamente lo que
+      // buscaria un atacante antes de lanzar fuerza bruta.
       return {
-        isBlocked: false,
-        attempts: 0,
-        remaining: this.config.maxAttempts,
+        isBlocked: true,
+        attempts: this.config.maxAttempts,
+        remaining: 0,
         resetTime: Date.now() + this.config.windowMs
       }
     }
@@ -145,10 +148,14 @@ export class RateLimitService {
       }
     } catch (error) {
       console.error('Rate limit increment error:', error)
+      // FALLO CERRADO: si el backend del rate-limit no responde, no se puede
+      // afirmar que queden intentos. Devolver isBlocked:false convertia una
+      // caida de Redis en "proteccion desactivada", que es exactamente lo que
+      // buscaria un atacante antes de lanzar fuerza bruta.
       return {
-        isBlocked: false,
-        attempts: 0,
-        remaining: this.config.maxAttempts,
+        isBlocked: true,
+        attempts: this.config.maxAttempts,
+        remaining: 0,
         resetTime: Date.now() + this.config.windowMs
       }
     }
@@ -192,10 +199,14 @@ export class RateLimitService {
       }
     } catch (error) {
       console.error('Rate limit getRemaining error:', error)
+      // FALLO CERRADO: si el backend del rate-limit no responde, no se puede
+      // afirmar que queden intentos. Devolver isBlocked:false convertia una
+      // caida de Redis en "proteccion desactivada", que es exactamente lo que
+      // buscaria un atacante antes de lanzar fuerza bruta.
       return {
-        isBlocked: false,
-        attempts: 0,
-        remaining: this.config.maxAttempts,
+        isBlocked: true,
+        attempts: this.config.maxAttempts,
+        remaining: 0,
         resetTime: Date.now() + this.config.windowMs
       }
     }

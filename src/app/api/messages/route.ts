@@ -1,7 +1,6 @@
 // src/app/api/messages/route.ts (versión corregida)
 import { messageCreateSchema, messageUpdateSchema } from "@/src/features/messages/schema/validations"
-import { auth } from "@/src/lib/auth"
-import { requireAuth } from "@/src/lib/authz"
+import { requireAuth, ownedWhere } from "@/src/lib/authz"
 import prisma from "@/src/lib/prisma"
 import { redis } from "@/src/lib/redis"
 import { CatchError } from "@/src/utils/catchError"
@@ -14,8 +13,14 @@ const CACHE_KEY = "messages-cache";
 
 export async function GET(req: Request) {
   try {
-    const session = await auth.api.getSession({ headers: req.headers });
-    if (!session?.user) return HttpResponse.sendUnauthorized("Debes iniciar sesión");
+    // Antes esta ruta llamaba a auth.api.getSession directamente y solo
+    // comprobaba `session?.user`, sin validar `status` ni `is_deleted`. Como el
+    // registro es publico, cualquier desconocido podia crear una cuenta y
+    // exportar nombres, telefonos y textos de TODOS los mensajes, ademas
+    // filtrando por telefono. El resto de verbos de este archivo ya usaban
+    // requireAuth; esta era la unica excepcion.
+    const gate = await requireAuth(req);
+    if ("response" in gate) return gate.response;
 
     const { searchParams } = new URL(req.url)
     const search = searchParams.get('search')?.trim() || ''
@@ -111,7 +116,10 @@ export async function POST(req: Request) {
           status: 'pending',
           createdBy: actor,
           createdAt: new Date(),
-        }))
+        })),
+        // Mismo motivo que en /api/messages/assign: el unico (postId, contactId)
+        // hacia fallar el lote completo ante un solo duplicado.
+        skipDuplicates: true,
       })
     );
 
@@ -158,7 +166,9 @@ export async function PUT(request: NextRequest) {
     const data = parsed.data;
     const [updated, updateError] = await CatchError(
       prisma.message.update({
-        where: { id },
+        // La condicion de propiedad viaja en el mismo `where` que la escritura:
+        // si el mensaje es de otro usuario, Prisma lanza P2025 -> 404.
+        where: ownedWhere(gate.user, { id }),
         data: {
           ...data,
           ...(data.sentAt && { sentAt: new Date(data.sentAt) }),
@@ -220,8 +230,8 @@ export async function DELETE(request: NextRequest) {
     }
 
     const [message, messageError] = await CatchError(
-      prisma.message.findUnique({
-        where: { id },
+      prisma.message.findFirst({
+        where: ownedWhere(gate.user, { id }),
         select: {
           id: true,
           post: {
@@ -248,8 +258,8 @@ export async function DELETE(request: NextRequest) {
 
     const [deleteError] = await CatchError(
       prisma.message.update({
-        where: { id },
-        data: { isDeleted: true }
+        where: ownedWhere(gate.user, { id }),
+        data: { isDeleted: true, updatedBy: gate.user.email ?? "desconocido" }
       })
     );
 
