@@ -78,7 +78,11 @@ export async function POST(req: Request) {
           status: 'pending',
           createdBy: gate.user.email ?? "desconocido",
           createdAt: new Date(),
-        }))
+        })),
+        // Sin esto, reasignar un contacto ya asignado violaba el unico
+        // (postId, contactId), abortaba el LOTE ENTERO con P2002 -y por tanto
+        // perdia tambien los contactos nuevos- y devolvia un 500 generico.
+        skipDuplicates: true,
       })
     );
 

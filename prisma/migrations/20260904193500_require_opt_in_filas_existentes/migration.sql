@@ -1,0 +1,11 @@
+-- Reactiva el gate de consentimiento en las filas YA existentes.
+--
+-- La migracion anterior cambia el @default de `requireOptIn` a true, pero eso
+-- solo afecta a filas nuevas. Cualquier instalacion que hubiera guardado la
+-- pantalla de Configuracion antes de este cambio tiene la fila singleton con
+-- requireOptIn = 0, y seguiria enviando a contactos sin opt-in.
+--
+-- Es deliberadamente conservador: reactivar el gate puede hacer que algunos
+-- envios fallen con CONSENT_NOT_OPTED_IN, y eso es exactamente lo que debe
+-- pasar mientras no exista prueba del consentimiento.
+UPDATE `app_settings` SET `requireOptIn` = 1 WHERE `requireOptIn` = 0;

@@ -18,7 +18,9 @@ export async function createPost(data: PostFormValues): Promise<PostsResponse> {
       throw new Error("Error al crear el template");
     }
 
-    data.contentTemplateId = templateTwilio?.template?.id ?? 'N/A';
+    // Sin plantilla se omite el campo: enviar "N/A" rompia la clave foranea
+    // (contentTemplateId debe ser un id real de twilio_content_templates o nada).
+    data.contentTemplateId = templateTwilio?.template?.id ?? undefined;
     const response = await fetch("/api/posts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
