@@ -8,11 +8,17 @@
     "start": "next start",
     "worker": "tsx src/worker/index.ts",
     "worker:dev": "tsx watch src/worker/index.ts",
-    "lint": "next lint",
+    "lint": "eslint .",
     "db:seed": "tsx src/seed/database_seeder.ts",
     "create:feature": "node ./src/scripts/create-feature.mjs",
     "test:twilio": "node ./src/scripts/test-twilio.mjs",
-    "db:reset": "prisma migrate reset && npm run db:seed"
+    "db:reset": "prisma migrate reset && npm run db:seed",
+    "lint:fix": "eslint . --fix",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:ci": "vitest run --reporter=dot",
+    "db:bootstrap-admin": "tsx src/seed/bootstrap-admin.ts"
   },
   "prisma": {
     "seed": "tsx src/seed/database_seeder.ts"
@@ -24,7 +30,8 @@
     "@maskito/kit": "^4.0.0",
     "@maskito/phone": "^4.0.0",
     "@maskito/react": "^4.0.0",
-    "@prisma/client": "^6.18.0",
+    "@next/env": "16.3.4",
+    "@prisma/client": "6.19.3",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-checkbox": "^1.3.3",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -59,7 +66,7 @@
     "ioredis": "^5.11.1",
     "libphonenumber-js": "^1.13.8",
     "lucide-react": "^0.552.0",
-    "next": "^16.2.10",
+    "next": "16.3.4",
     "next-themes": "^0.4.6",
     "nodemailer": "^9.0.3",
     "papaparse": "^5.5.4",
@@ -84,12 +91,17 @@
     "@types/papaparse": "^5.5.2",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "dotenv": "17.4.2",
     "eslint": "^9",
-    "eslint-config-next": "16.0.1",
-    "prisma": "^6.18.0",
+    "eslint-config-next": "16.3.4",
+    "prisma": "6.19.3",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "tw-animate-css": "^1.4.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "4.1.11"
+  },
+  "overrides": {
+    "deepmerge-ts": "^8.0.2"
   }
 }

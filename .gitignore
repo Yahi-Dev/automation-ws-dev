@@ -1,6 +1,9 @@
-# See https://help.github.com/articles/ignoring-files/ for more about ignoring files.
+# ---------------------------------------------------------------------------
+# automation-ws — archivos y carpetas que NO se versionan.
+# Referencia: https://help.github.com/articles/ignoring-files/
+# ---------------------------------------------------------------------------
 
-# dependencies
+# --- Dependencias ----------------------------------------------------------
 /node_modules
 /.pnp
 .pnp.*
@@ -9,83 +12,130 @@
 !.yarn/plugins
 !.yarn/releases
 !.yarn/versions
-# uploads (archivos subidos localmente, no versionar)
-public/uploads/
-public/uploads/posts/
 
-# testing
-/coverage
-
-# next.js
+# --- Build y artefactos generados ------------------------------------------
 /.next/
 /out/
-
-# production
 /build
+/dist
+next-env.d.ts
+*.tsbuildinfo
+.swc/
 
-# misc
-.DS_Store
+# --- Entorno y secretos ----------------------------------------------------
+# Se ignora todo .env salvo la plantilla de ejemplo, que SI debe versionarse
+# para que cualquiera pueda levantar el proyecto sin adivinar variables.
+.env*
+!.env.example
+# Acceso directo local al .env (especifico de la maquina)
+env.url
+
+# --- Certificados, llaves y credenciales -----------------------------------
 *.pem
+*.key
+*.crt
+*.cer
+*.p12
+*.pfx
+*.jks
+*.keystore
+credentials.json
+service-account*.json
+gha-creds-*.json
 
-# debug
+# --- Base de datos: respaldos y volcados -----------------------------------
+# OJO: no se usa "*.sql" para no excluir prisma/migrations/**/migration.sql
+/dumps/
+/backups/
+*.dump
+*.sql.gz
+*.sql.zip
+*.sqlite
+*.sqlite3
+*.db
+
+# --- Archivos subidos por usuarios -----------------------------------------
+public/uploads/
+
+# --- Pruebas, cobertura y reportes -----------------------------------------
+/coverage/
+/.nyc_output/
+/test-results/
+/playwright-report/
+/.playwright/
+/blob-report/
+/.vitest/
+/reports/
+npm-audit.json
+*-report.json
+*-report.html
+lighthouse*.json
+
+# --- Cachés ----------------------------------------------------------------
+.turbo/
+.cache/
+.eslintcache
+.stylelintcache
+.parcel-cache/
+.vercel
+
+# --- Logs ------------------------------------------------------------------
+*.log
+logs/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
+pids/
+*.pid
+*.pid.lock
+*.seed
 
-# env files (can opt-in for committing if needed)
-.env*
+# --- Herramientas locales de desarrollo ------------------------------------
+# Configuración y artefactos de asistentes/CLI locales: son de cada
+# desarrollador, no del proyecto.
+.agents/
+.skills/
+skills-lock.json
+.claude/
+.cursor/
+.cursorignore
+.windsurf/
+.continue/
+.aider*
+.roo/
+.codeium/
+.specstory/
+.history/
 
-# local Windows shortcut to the .env file (machine-specific, do not version)
-env.url
-
-# vercel
-.vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# editor / IDE
+# --- Editor / IDE ----------------------------------------------------------
 .vscode/
 .idea/
 *.swp
 *.swo
+*.sublime-workspace
+*.sublime-project
 
-# OS
+# --- Sistema operativo -----------------------------------------------------
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
 Thumbs.db
 ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 
-# logs
-*.log
-logs/
-
-# caches
-.turbo/
-.cache/
-*.tsbuildinfo
-
-# herramientas locales y archivos generados (no versionar)
-.agents/
-.skills/
-skills-lock.json
-
-# lint / build caches
-.eslintcache
-*.tsbuildinfo
-
-# artefactos de testing (Playwright / e2e / cobertura)
-/test-results/
-/playwright-report/
-/.playwright/
-/blob-report/
-/coverage/
-
-# archivos locales / temporales
+# --- Temporales y locales --------------------------------------------------
 *.local
 tmp/
 temp/
+*.tmp
 *.bak
+*.orig
+*.rej
 *.tgz
+*.zip
+*.7z
+*.rar
