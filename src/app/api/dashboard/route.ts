@@ -16,16 +16,26 @@ export async function GET(request: NextRequest) {
     if ("response" in gate) return gate.response
 
     const { searchParams } = new URL(request.url)
-    const from = searchParams.get("from")
-    const to = searchParams.get("to")
+
+    // `from`/`to` llegaban crudos y formaban parte de la CLAVE DE CACHE. Cada
+    // valor distinto era un fallo de cache garantizado (~26 consultas) y ademas
+    // dejaba una entrada nueva en el mapa en memoria que nadie volvia a leer:
+    // agotamiento del pool de Prisma y crecimiento de heap sin cota, desde una
+    // ruta sin rate-limit. Un valor no parseable producia ademas un 500.
+    const rango = parseRango(searchParams.get("from"), searchParams.get("to"))
+    if ("error" in rango) {
+      return HttpResponse.sendBadRequest(rango.error)
+    }
 
     // Cache-aside: las métricas son globales (iguales para todos) y no requieren
     // frescura al segundo. TTL corto (30s) absorbe ráfagas de recargas del dashboard
     // sin recalcular ~20 queries por request. (F4 lo reemplaza por rollups.)
+    // La clave se normaliza a día: un rango solo puede generar tantas entradas
+    // como días distintos, no tantas como cadenas distintas envíe el cliente.
     const dashboardData = await getOrSetCacheNS(
       "dashboard",
-      [from ?? "all", to ?? "all"],
-      () => computeDashboard(from, to),
+      [rango.from ?? "all", rango.to ?? "all"],
+      () => computeDashboard(rango.from, rango.to),
       30
     )
 
@@ -34,6 +44,46 @@ export async function GET(request: NextRequest) {
     console.error("Error fetching dashboard data:", error)
     return HttpResponse.sendServerError("Error al obtener los datos del dashboard", error)
   }
+}
+
+/** Ventana maxima consultable, en dias. Acota el coste de un fallo de cache. */
+const MAX_DIAS_RANGO = 366
+
+/**
+ * Valida y normaliza el rango de fechas del dashboard.
+ * Devuelve las fechas como `YYYY-MM-DD` para que la clave de cache sea estable.
+ */
+function parseRango(
+  fromRaw: string | null,
+  toRaw: string | null
+): { from: string | null; to: string | null } | { error: string } {
+  const normaliza = (valor: string | null, etiqueta: string) => {
+    if (!valor) return null
+    const d = new Date(valor)
+    if (Number.isNaN(d.getTime())) {
+      return { error: `El parámetro "${etiqueta}" no es una fecha válida` }
+    }
+    return d
+  }
+
+  const from = normaliza(fromRaw, "from")
+  if (from && "error" in from) return from
+  const to = normaliza(toRaw, "to")
+  if (to && "error" in to) return to
+
+  if (from && to && from.getTime() > to.getTime()) {
+    return { error: 'El parámetro "from" no puede ser posterior a "to"' }
+  }
+
+  if (from && to) {
+    const dias = (to.getTime() - from.getTime()) / 86_400_000
+    if (dias > MAX_DIAS_RANGO) {
+      return { error: `El rango no puede superar ${MAX_DIAS_RANGO} días` }
+    }
+  }
+
+  const aDia = (d: Date | null) => (d ? d.toISOString().slice(0, 10) : null)
+  return { from: aDia(from), to: aDia(to) }
 }
 
 async function computeDashboard(from: string | null, to: string | null) {

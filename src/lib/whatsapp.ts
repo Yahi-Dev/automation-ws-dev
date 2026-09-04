@@ -114,7 +114,7 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
 }
 
 /** Mapea el MessageStatus de Twilio a nuestro estado interno. */
-export function mapTwilioStatus(twilioStatus?: string): string {
+export function mapTwilioStatus(twilioStatus?: string): string | null {
   switch ((twilioStatus || "").toLowerCase()) {
     case "queued":
     case "accepted":
@@ -132,7 +132,15 @@ export function mapTwilioStatus(twilioStatus?: string): string {
     case "undelivered":
       return "undelivered";
     default:
-      return twilioStatus || "pending";
+      // Un estado que Twilio no documenta NO se escribe crudo en la base de
+      // datos. Antes si: `statusRank` le daba -1, con lo que el guard
+      // anti-retroceso de webhook-ingest no lo frenaba y `message.status`
+      // acababa con un valor inexistente en la maquina de estados. Ahora que la
+      // columna es VARCHAR(16), ademas, un valor largo haria fallar el UPDATE.
+      //
+      // Se ignora conservando el estado actual: devolver null indica
+      // "sin cambio" a quien llama.
+      return null;
   }
 }
 

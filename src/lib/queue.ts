@@ -23,15 +23,28 @@ export const QUEUE_NAMES = {
 // con su propia copia de ioredis (evita choque de tipos por doble instalación).
 // BullMQ exige maxRetriesPerRequest: null para los workers (comandos bloqueantes).
 let cachedConn: ConnectionOptions | null = null;
+/**
+ * Nota: la base de datos indicada en el pathname de REDIS_URL se conserva.
+ * Antes se descartaba y todo acababa en la db 0, compartida con el cache de
+ * sesiones si se apuntaba al mismo Redis.
+ */
 export function getConnectionOptions(): ConnectionOptions | null {
   if (!queueEnabled) return null;
   if (cachedConn) return cachedConn;
   const u = new URL(REDIS_URL);
+
+  // El pathname de la URL indica la base de datos de Redis (`redis://host:6379/3`).
+  // Antes se descartaba y todo acababa en la db 0, compartida con el caché de
+  // sesiones si se apuntaba al mismo servidor.
+  const rutaDb = u.pathname.replace(/^\//, "");
+  const db = rutaDb && /^\d+$/.test(rutaDb) ? Number(rutaDb) : undefined;
+
   cachedConn = {
     host: u.hostname,
     port: u.port ? Number(u.port) : 6379,
     username: u.username ? decodeURIComponent(u.username) : undefined,
     password: u.password ? decodeURIComponent(u.password) : undefined,
+    ...(db !== undefined ? { db } : {}),
     maxRetriesPerRequest: null,
     enableReadyCheck: false,
     ...(u.protocol === "rediss:" ? { tls: {} } : {}),
@@ -92,9 +105,13 @@ export type WebhookJobData = {
 export async function enqueueCampaign(data: CampaignJobData): Promise<string | null> {
   const q = getCampaignQueue();
   if (!q) return null;
+  // jobId DETERMINISTA por campana. Antes llevaba Date.now(), asi que cada
+  // llamada creaba un job nuevo: el escaneo de dispatch (cada 60 s) apilaba un
+  // job por minuto para la misma campana mientras quedara algo pendiente, y
+  // cada uno volvia a cargar y recorrer la misma lista. Con el id fijo, BullMQ
+  // descarta el add mientras el job siga vivo.
   const job = await q.add("send", data, {
-    // jobId único por disparo (permite reintentos internos sin colisionar).
-    jobId: `campaign:${data.postId}:${Date.now()}`,
+    jobId: `campaign:${data.postId}`,
   });
   return job.id ?? null;
 }

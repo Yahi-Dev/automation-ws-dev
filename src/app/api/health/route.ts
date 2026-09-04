@@ -3,39 +3,72 @@
 // Útil para balanceadores, monitores y readiness/liveness probes.
 import { NextResponse } from "next/server";
 import prisma from "@/src/lib/prisma";
-import { redis } from "@/src/lib/redis";
+import { redis, redisDisponible } from "@/src/lib/redis";
 import { queueEnabled } from "@/src/lib/queue";
 import { twilioBreaker } from "@/src/lib/whatsapp";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+/** Timeout de cada comprobación: una sonda que se cuelga es peor que una que falla. */
+const TIMEOUT_MS = 2_000;
+
+function conPlazo<T>(promesa: Promise<T>, ms: number): Promise<T | "timeout"> {
+  return Promise.race([
+    promesa,
+    new Promise<"timeout">((r) => setTimeout(() => r("timeout"), ms)),
+  ]);
+}
+
 export async function GET() {
   const checks: Record<string, string> = {};
 
-  // DB (crítico)
+  // DB (crítico).
+  // Con plazo: si MySQL acepta la conexión pero no responde, esta sonda se
+  // quedaba colgada indefinidamente y el balanceador nunca detectaba la caída.
   let dbOk = false;
   try {
-    await prisma.$queryRaw`SELECT 1`;
-    dbOk = true;
-    checks.db = "ok";
+    const r = await conPlazo(prisma.$queryRaw`SELECT 1`, TIMEOUT_MS);
+    dbOk = r !== "timeout";
+    checks.db = dbOk ? "ok" : "timeout";
   } catch {
     checks.db = "down";
   }
 
-  // Redis (no crítico: hay fallback en memoria)
-  try {
-    const pingKey = "health:ping";
-    await redis.set(pingKey, "1", { ex: 10 });
-    checks.redis = (await redis.get<string>(pingKey)) ? "ok" : "degraded";
-  } catch {
-    checks.redis = "degraded";
+  // Redis.
+  //
+  // Antes esta comprobación no podía fallar NUNCA: `redis` degrada de forma
+  // transparente al mapa en memoria, así que el set/get siempre respondía "ok"
+  // aunque Upstash estuviera caído. Ahora se informa del modo real.
+  if (!redisDisponible()) {
+    checks.redis = "no_configurado";
+  } else {
+    try {
+      const pingKey = "health:ping";
+      const r = await conPlazo(
+        (async () => {
+          await redis.set(pingKey, "1", { ex: 10 });
+          return redis.get<string>(pingKey);
+        })(),
+        TIMEOUT_MS
+      );
+      checks.redis = r === "timeout" ? "timeout" : r ? "ok" : "degraded";
+    } catch {
+      checks.redis = "degraded";
+    }
   }
 
-  checks.queue = queueEnabled ? "enabled" : "disabled";
+  // `queueEnabled` solo dice que REDIS_URL está definida: NO prueba que exista
+  // un worker vivo consumiendo. Se nombra en consecuencia para no dar por buena
+  // una cola sin nadie al otro lado, que es la diferencia entre una campaña
+  // enviada y una campaña perdida.
+  checks.queue = queueEnabled ? "configurada" : "deshabilitada";
   checks.twilio = twilioBreaker.isOpen() ? "circuit_open" : "ok";
 
-  const status = !dbOk ? "down" : Object.values(checks).some((v) => v === "degraded" || v === "circuit_open") ? "degraded" : "ok";
+  const degradado = Object.values(checks).some((v) =>
+    ["degraded", "timeout", "circuit_open"].includes(v)
+  );
+  const status = !dbOk ? "down" : degradado ? "degraded" : "ok";
   const httpStatus = dbOk ? 200 : 503;
 
   return NextResponse.json({ status, checks, time: new Date().toISOString() }, { status: httpStatus });

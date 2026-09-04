@@ -44,10 +44,55 @@ async function main() {
     QUEUE_NAMES.campaignSend,
     async (job: Job<CampaignJobData>) => {
       const { postId, actor, batchSize, delayMs, includeSent } = job.data;
-      const outcome = await sendPostMessages(postId, actor, { batchSize, delayMs, includeSent });
-      return outcome;
+
+      // Cada llamada a sendPostMessages procesa como mucho WHATSAPP_MAX_PER_RUN
+      // mensajes (tope que evita hidratar la campana entera en memoria). Se
+      // itera aqui hasta agotarla, en vez de lanzar para que BullMQ reintente:
+      // lanzar consumiria los `attempts` del job, y una campana de 10.000
+      // mensajes necesita 20 pasadas, muchas mas que los 5 reintentos
+      // configurados. Los `attempts` quedan asi para fallos de verdad.
+      const MAX_PASADAS = Math.max(1, Number(process.env.WORKER_MAX_PASADAS ?? 200));
+
+      let acumulado = { total: 0, sent: 0, failed: 0 };
+      let ultimo: Awaited<ReturnType<typeof sendPostMessages>> | null = null;
+
+      for (let pasada = 0; pasada < MAX_PASADAS; pasada++) {
+        const outcome = await sendPostMessages(postId, actor, { batchSize, delayMs, includeSent });
+        ultimo = outcome;
+
+        if (!outcome.ok) break;
+
+        acumulado = {
+          total: acumulado.total + outcome.total,
+          sent: acumulado.sent + outcome.sent,
+          failed: acumulado.failed + outcome.failed,
+        };
+
+        // El circuito de Twilio esta abierto: no tiene sentido seguir dando
+        // pasadas. Se lanza para que BullMQ reintente con backoff exponencial.
+        // Antes esto salia por `break` devolviendo { ok: true }, y BullMQ
+        // marcaba como COMPLETADO un job que habia enviado 5 de 50.000.
+        if (outcome.cortadoPorBreaker) {
+          throw new Error(
+            `Campana ${postId} interrumpida: el circuito de Twilio esta abierto. Reintento programado.`
+          );
+        }
+
+        if (outcome.pendientesRestantes === 0) break;
+      }
+
+      return { postId, ...acumulado, ultimo: ultimo?.ok ? undefined : ultimo };
     },
-    { connection, concurrency: campaignConcurrency }
+    {
+      connection,
+      concurrency: campaignConcurrency,
+      // El job de campana itera por lotes y puede durar minutos. El lock por
+      // defecto de BullMQ son 30 s: si se supera sin renovar, el job se declara
+      // "stalled" y se redespacha A OTRO WORKER mientras el original sigue
+      // enviando. Con 5 minutos hay margen de sobra entre renovaciones.
+      lockDuration: 300_000,
+      maxStalledCount: 1,
+    }
   );
 
   // --- webhook-ingest ---
@@ -89,13 +134,43 @@ async function main() {
     "[worker] listo. Dispatch + rollup cada 60s."
   );
 
-  // Cierre ordenado
+  // Cierre ordenado.
+  //
+  // `close()` sin argumento espera a que TERMINEN los jobs activos. Con una
+  // campaña larga eso podía superar el periodo de gracia del orquestador
+  // (30 s en Kubernetes, 10 s en `docker stop`), que entonces manda SIGKILL.
+  // Y un SIGKILL entre `messages.create` y el UPDATE a "sent" deja el mensaje
+  // en `queued` sin providerSid: a los 90 s se re-reclama y SE ENVÍA DOS VECES.
+  //
+  // Por eso: se pide cierre suave, y si no termina dentro del plazo se fuerza
+  // (`close(true)`) para al menos cerrar limpiamente las conexiones de Redis
+  // antes de que llegue el SIGKILL.
+  const GRACIA_MS = Math.max(1_000, Number(process.env.WORKER_SHUTDOWN_TIMEOUT_MS ?? 25_000));
+  let cerrando = false;
+
   const shutdown = async (signal: string) => {
-    console.log(`[worker] ${signal} recibido, cerrando...`);
-    // Cada worker cierra su propia conexión de Redis (BullMQ las gestiona).
-    await Promise.allSettled([campaignWorker.close(), webhookWorker.close(), dispatchWorker.close()]);
+    if (cerrando) return;
+    cerrando = true;
+
+    console.log(`[worker] ${signal} recibido, cerrando (máx. ${GRACIA_MS} ms)...`);
+
+    const workers = [campaignWorker, webhookWorker, dispatchWorker];
+    const suave = Promise.allSettled(workers.map((w) => w.close()));
+    const plazo = new Promise<"timeout">((r) => setTimeout(() => r("timeout"), GRACIA_MS));
+
+    const resultado = await Promise.race([suave.then(() => "ok" as const), plazo]);
+
+    if (resultado === "timeout") {
+      console.warn(
+        "[worker] los jobs activos no terminaron a tiempo; cierre forzado. " +
+          "Los mensajes en vuelo se recuperarán por el mecanismo de 'queued' colgados."
+      );
+      await Promise.allSettled(workers.map((w) => w.close(true)));
+    }
+
     process.exit(0);
   };
+
   process.on("SIGTERM", () => void shutdown("SIGTERM"));
   process.on("SIGINT", () => void shutdown("SIGINT"));
 }

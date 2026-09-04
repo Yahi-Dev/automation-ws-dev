@@ -6,12 +6,26 @@ import prisma from "./prisma";
 import { sendPostMessages } from "./campaign-send";
 import { queueEnabled, enqueueCampaign } from "./queue";
 
+/** Debe coincidir con el limite de intentos de campaign-send. */
+const MAX_INTENTOS = Math.max(1, Number(process.env.WHATSAPP_MAX_ATTEMPTS ?? 3));
+
 export async function findDuePostIds(): Promise<number[]> {
   const duePosts = await prisma.posts.findMany({
     where: {
       isDeleted: false,
       schedule: { lte: new Date() },
-      messages: { some: { isDeleted: false, status: { in: ["pending", "failed"] } } },
+      messages: {
+        some: {
+          isDeleted: false,
+          status: { in: ["pending", "failed"] },
+          // Sin estas dos condiciones, una campana cuyos unicos mensajes
+          // restantes son fallos DEFINITIVOS (opt-out, telefono invalido) se
+          // consideraba "vencida con pendientes" y se reencolaba cada 60 s de
+          // forma indefinida, sin llegar a enviar nada.
+          terminalAt: null,
+          attempts: { lt: MAX_INTENTOS },
+        },
+      },
     },
     select: { id: true },
     orderBy: { schedule: "asc" },

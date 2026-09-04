@@ -19,6 +19,38 @@ const upstash = isConfigured ? new Redis({ url: url as string, token: token as s
 type Entry = { value: unknown; expiresAt: number | null };
 const mem = new Map<string, Entry>();
 
+/**
+ * Cota del fallback en memoria.
+ *
+ * Antes este mapa no tenia limite NI barrido: las entradas solo se borraban si
+ * alguien volvia a leer esa misma clave. Cualquier ruta que construyera claves
+ * variables (el dashboard con `from`/`to` sin validar, los contadores por IP)
+ * dejaba entradas residentes para siempre, hasta agotar el heap del proceso.
+ *
+ * Con una sola instancia este mapa es el camino ACTIVO, no un modo degradado.
+ */
+const MEM_MAX_ENTRADAS = Number(process.env.MEM_CACHE_MAX_ENTRIES ?? 5000);
+const MEM_BARRIDO_CADA = 500;
+let memEscriturasDesdeBarrido = 0;
+
+/** Elimina las entradas caducadas. O(n) sobre el mapa, amortizado 1 de cada N escrituras. */
+function memBarrer(ahora: number) {
+  for (const [k, e] of mem) {
+    if (e.expiresAt !== null && ahora > e.expiresAt) mem.delete(k);
+  }
+}
+
+/** Descarta las entradas mas antiguas. `Map` conserva el orden de insercion. */
+function memRecortar() {
+  const sobran = mem.size - MEM_MAX_ENTRADAS;
+  if (sobran <= 0) return;
+  let n = 0;
+  for (const k of mem.keys()) {
+    mem.delete(k);
+    if (++n >= sobran) break;
+  }
+}
+
 function memGet<T>(key: string): T | null {
   const e = mem.get(key);
   if (!e) return null;
@@ -29,7 +61,15 @@ function memGet<T>(key: string): T | null {
   return e.value as T;
 }
 function memSet(key: string, value: unknown, exSeconds?: number) {
-  mem.set(key, { value, expiresAt: exSeconds ? Date.now() + exSeconds * 1000 : null });
+  const ahora = Date.now();
+  mem.set(key, { value, expiresAt: exSeconds ? ahora + exSeconds * 1000 : null });
+
+  if (++memEscriturasDesdeBarrido >= MEM_BARRIDO_CADA) {
+    memEscriturasDesdeBarrido = 0;
+    memBarrer(ahora);
+  }
+  // Tras el barrido puede seguir sobrando: hay claves sin TTL que nunca caducan.
+  memRecortar();
 }
 function memDel(...keys: string[]): number {
   let n = 0;
@@ -148,6 +188,17 @@ class SafeRedis {
 }
 
 export const redis = new SafeRedis();
+
+/**
+ * ¿Hay un Redis real configurado, o se está usando el mapa en memoria?
+ *
+ * `SafeRedis` degrada de forma transparente, lo cual es correcto para la app
+ * pero hace que /api/health no pueda distinguir "Redis funciona" de "Redis no
+ * existe y estoy usando memoria". Esto lo expone explícitamente.
+ */
+export function redisDisponible(): boolean {
+  return isConfigured;
+}
 export default redis;
 
 export async function getOrSetCache<T>(

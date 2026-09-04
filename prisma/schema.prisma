@@ -126,7 +126,10 @@ model appSettings {
   delayMs               Int?
   webhookBaseUrl        String?
   webhookSecretEnc      String?  @db.Text
-  requireOptIn          Boolean  @default(false)
+  // Fail-safe de consentimiento: por defecto SI se exige opt-in. Antes el
+  // default era false, de modo que crear la fila de ajustes (guardar la
+  // pantalla de Configuracion una sola vez) desactivaba el gate para siempre.
+  requireOptIn          Boolean  @default(true)
 
   updatedAt             DateTime @updatedAt
   updatedBy             String?
@@ -191,7 +194,20 @@ model message {
   postId    Int
   contactId Int
   // estados: pending, queued, sent, delivered, read, failed, undelivered
-  status    String   @default("pending")
+  // VarChar(16) explicito: sin el, MySQL usa VARCHAR(191) y dimensiona los
+  // buffers de filesort y las tablas temporales por la longitud maxima.
+  status    String   @default("pending") @db.VarChar(16)
+
+  // Control de reintentos y estado terminal.
+  //
+  // Antes, "failed" era siempre reelegible: los fallos PERMANENTES
+  // (opt-out, sin opt-in, telefono invalido) se volvian a reclamar cada 60 s
+  // indefinidamente. Con 20.000 contactos importados eso son ~40.000 UPDATE por
+  // minuto sostenidos, sin enviar un solo mensaje.
+  attempts    Int       @default(0)
+  lastAttemptAt DateTime?
+  // Marcado != null => no se vuelve a intentar nunca mas.
+  terminalAt  DateTime?
   sentAt      DateTime?
   deliveredAt DateTime?
   readAt      DateTime?
@@ -218,6 +234,13 @@ model message {
   @@index([postId, status])
   @@index([status, createdAt])
   @@index([sentAt]) // acelera la recomputación del rollup diario (F4)
+  // El recuento de "fallidos" del dashboard filtra por status + updatedAt y no
+  // tenia ningun indice que lo soportase: obligaba a un lookup por fila.
+  @@index([status, updatedAt])
+  // Selección y reclamo de campaña (postId + status, ordenado por id).
+  @@index([postId, status, id])
+  // Permite excluir de un vistazo los mensajes ya cerrados de forma definitiva.
+  @@index([terminalAt])
   @@map("message")
 }
 

@@ -11,6 +11,7 @@
 //   S3_ENDPOINT           (R2/compatibles: https://<accountid>.r2.cloudflarestorage.com)
 //   S3_PUBLIC_BASE_URL    (base pública para servir el objeto; ej. bucket público o CDN)
 //   S3_FORCE_PATH_STYLE   ("true" para endpoints que lo requieran)
+import { NodeHttpHandler } from "@smithy/node-http-handler";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 const BUCKET = process.env.S3_BUCKET || "";
@@ -32,6 +33,13 @@ function getClient(): S3Client | null {
       endpoint: ENDPOINT,
       forcePathStyle: FORCE_PATH_STYLE,
       credentials: { accessKeyId: ACCESS_KEY, secretAccessKey: SECRET_KEY },
+      // Sin timeouts, una subida contra un endpoint que acepta la conexion y
+      // no responde deja colgado el handler HTTP hasta el limite del runtime.
+      requestHandler: new NodeHttpHandler({
+        connectionTimeout: 5_000,
+        requestTimeout: 20_000,
+      }),
+      maxAttempts: 3,
     });
   }
   return client;
