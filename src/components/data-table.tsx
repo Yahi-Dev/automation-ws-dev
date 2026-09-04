@@ -233,6 +233,7 @@ export function DataTable<TData, TValue>({
           <div className="relative flex-1 min-w-[220px] max-w-sm">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" style={{ color: COLORS.light }} />
             <Input
+              data-tour="tabla-buscador"
               placeholder={searchPlaceholder}
               value={globalFilter ?? ""}
               onChange={(event) => setGlobalFilter(String(event.target.value))}
@@ -446,6 +447,7 @@ export function DataTable<TData, TValue>({
 
           {showCreateButton && onCreateClick && (
             <Button
+              data-tour="tabla-boton-crear"
               onClick={onCreateClick}
               className="shadow-sm hover:shadow-md transition-shadow"
               style={{ backgroundColor: COLORS.primary, color: COLORS.dark }}
@@ -458,7 +460,7 @@ export function DataTable<TData, TValue>({
       </div>
 
       {/* Table */}
-      <Card className="border-gray-200 shadow-sm overflow-hidden">
+      <Card className="border-gray-200 shadow-sm overflow-hidden" data-tour="tabla-datos">
         <div className="overflow-x-auto">
           <Table>
             <TableHeader>

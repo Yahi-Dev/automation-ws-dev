@@ -121,3 +121,61 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* ---------------------------------------------------------------------------
+   Ayuda guiada (driver.js)
+   ---------------------------------------------------------------------------
+   La app la usa una persona mayor: el texto por defecto de driver.js es
+   demasiado pequeno. Se agranda todo el globo y se separan bien los botones
+   para que no se pulse "Cerrar" queriendo pulsar "Siguiente".
+--------------------------------------------------------------------------- */
+.driver-popover.ayuda-popover {
+  max-width: 26rem;
+  padding: 1.25rem;
+  border-radius: 0.75rem;
+}
+
+.driver-popover.ayuda-popover .driver-popover-title {
+  font-size: 1.15rem;
+  line-height: 1.4;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.driver-popover.ayuda-popover .driver-popover-description {
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.driver-popover.ayuda-popover .driver-popover-description ul {
+  margin: 0.5rem 0 0 1.1rem;
+  list-style: disc;
+}
+
+.driver-popover.ayuda-popover .driver-popover-description li {
+  margin-bottom: 0.25rem;
+}
+
+.driver-popover.ayuda-popover .driver-popover-footer {
+  margin-top: 1rem;
+  gap: 0.75rem;
+}
+
+/* Botones grandes: mas faciles de acertar con el dedo o con pulso tembloroso. */
+.driver-popover.ayuda-popover .driver-popover-footer-btn {
+  font-size: 0.95rem;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+}
+
+.driver-popover.ayuda-popover .driver-popover-progress-text {
+  font-size: 0.9rem;
+  opacity: 0.75;
+}
+
+/* La X de cerrar, separada del resto para no pulsarla sin querer. */
+.driver-popover.ayuda-popover .driver-popover-close-btn {
+  font-size: 1.5rem;
+  width: 2rem;
+  height: 2rem;
+}

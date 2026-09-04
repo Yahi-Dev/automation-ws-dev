@@ -192,7 +192,7 @@ export default function ContactsTable() {
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button variant="ghost" className="h-8 w-8 p-0" data-tour="acciones-contacto">
                   <span className="sr-only">Abrir menú</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
@@ -266,6 +266,7 @@ export default function ContactsTable() {
           />
           <Button
             variant="outline"
+            data-tour="importar-contactos"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
           >

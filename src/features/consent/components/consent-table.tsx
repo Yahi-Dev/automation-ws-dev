@@ -122,12 +122,12 @@ export default function ConsentTable() {
       cell: ({ row }) => {
         const raw = row.original.raw
         if (!raw) {
-          return <div className="text-sm text-gray-500">Sin evidencia registrada</div>
+          return <div className="text-sm text-gray-500" data-tour="consentimiento-evidencia">Sin evidencia registrada</div>
         }
         const truncatedText = raw.length > 80 ? `${raw.substring(0, 80)}...` : raw
         return (
           <div
-            className="max-w-xs cursor-help truncate"
+            className="max-w-xs cursor-help truncate" data-tour="consentimiento-evidencia"
             title={raw.length > 80 ? raw : undefined}
           >
             {truncatedText}
@@ -194,14 +194,14 @@ export default function ConsentTable() {
 
   return (
     <div className="container mx-auto py-5 px-5">
-      <div className="mb-6">
+      <div className="mb-6" data-tour="consentimiento-encabezado">
         <h1 className="text-3xl font-bold">Seguimiento de Consentimiento</h1>
         <p className="text-muted-foreground">
           Historial de altas y bajas de cada contacto. Es la prueba de que aceptaron recibir mensajes.
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2" data-tour="consentimiento-filtros">
         {CONSENT_EVENT_OPTIONS.map((f) => (
           <Button
             key={f.value}
@@ -214,7 +214,7 @@ export default function ConsentTable() {
         ))}
 
         <Select value={source} onValueChange={setSource}>
-          <SelectTrigger className="h-8 w-[220px]">
+          <SelectTrigger data-tour="consentimiento-origen" className="h-8 w-[220px]">
             <SelectValue placeholder="Todos los orígenes" />
           </SelectTrigger>
           <SelectContent>
@@ -229,7 +229,7 @@ export default function ConsentTable() {
         <Button
           variant="outline"
           size="sm"
-          className="ml-auto"
+          className="ml-auto" data-tour="consentimiento-exportar"
           onClick={() => exportCsv(filtrosActivos)}
         >
           <Download className="mr-2 h-4 w-4" />

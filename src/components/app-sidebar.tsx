@@ -93,7 +93,7 @@ export function AppSidebar({
         </SidebarMenu>
       </SidebarHeader>
       <FieldSeparator />
-      <SidebarContent className="px-3 py-4">
+      <SidebarContent className="px-3 py-4" data-tour="menu-lateral">
         <NavMain items={navMain} />
       </SidebarContent>
       <SidebarFooter className="border-t border-gray-100 px-3 py-4">

@@ -17,6 +17,7 @@ Aplicación web para **envío masivo (broadcast) de WhatsApp** a listas de conta
 - Consentimiento opt-in/opt-out (STOP/BAJA entrante) con auditoría y gate en el envío
 - **Pantalla de consentimiento** (`/consentimiento`): historial completo con filtros y exportación a CSV
 - **Bandeja de entrantes** (`/entrantes`): todo mensaje recibido queda registrado, incluso de números desconocidos
+- **Manual guiado dentro de la app**: botón «¿Cómo funciona?» en todas las pantallas, con 72 pasos que señalan dónde pulsar (driver.js). Se lanza solo la primera vez que se entra en cada pantalla
 - Plantillas de WhatsApp con estado de aprobación
 - Campañas (posts) con envío por lotes, control de velocidad y tracking por mensaje
 - Reportes: enviados/entregados/leídos/fallidos, filtros y desglose por campaña

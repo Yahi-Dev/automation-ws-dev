@@ -160,7 +160,7 @@ export default function PostsTable() {
         const now = new Date()
         const isPast = schedule < now
         return (
-          <div className="space-y-1">
+          <div className="space-y-1" data-tour="campana-fecha">
             <div className={`font-medium ${isPast ? 'text-gray-500' : 'text-green-600'}`}>
               {format(schedule, "PPP", { locale: es })}
             </div>
@@ -184,7 +184,7 @@ export default function PostsTable() {
         const truncatedText = text.length > 100 ? `${text.substring(0, 100)}...` : text
         return (
           <div
-            className="max-w-xs cursor-help truncate"
+            className="max-w-xs cursor-help truncate" data-tour="campana-texto"
             title={text.length > 100 ? text : undefined}
           >
             {truncatedText}
@@ -235,7 +235,7 @@ export default function PostsTable() {
           <>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" className="h-8 w-8 p-0">
+                <Button variant="ghost" className="h-8 w-8 p-0" data-tour="campana-acciones">
                   <span className="sr-only">Abrir menú</span>
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>

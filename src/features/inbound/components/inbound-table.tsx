@@ -104,13 +104,13 @@ export default function InboundTable() {
   const renderHandledBadge = (value: string) => {
     switch (value) {
       case 'opt_out':
-        return <Badge variant="destructive">Baja</Badge>
+        return <Badge variant="destructive" data-tour="entrantes-accion">Baja</Badge>
       case 'opt_in':
-        return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Alta</Badge>
+        return <Badge data-tour="entrantes-accion" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Alta</Badge>
       case 'contacto_desconocido':
-        return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Contacto desconocido</Badge>
+        return <Badge data-tour="entrantes-accion" className="bg-amber-100 text-amber-700 hover:bg-amber-100">Contacto desconocido</Badge>
       default:
-        return <Badge variant="outline">{getHandledText(value)}</Badge>
+        return <Badge variant="outline" data-tour="entrantes-accion">{getHandledText(value)}</Badge>
     }
   }
 
@@ -174,7 +174,7 @@ export default function InboundTable() {
       cell: ({ row }) => {
         const contact = row.original.contact
         if (!contact) {
-          return <div className="text-sm text-muted-foreground italic">Desconocido</div>
+          return <div className="text-sm text-muted-foreground italic" data-tour="entrantes-desconocido">Desconocido</div>
         }
         return (
           <div>
@@ -221,7 +221,7 @@ export default function InboundTable() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" data-tour="entrantes-vincular">
                 <span className="sr-only">Abrir menú</span>
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
@@ -242,14 +242,14 @@ export default function InboundTable() {
 
   return (
     <div className="container mx-auto py-5 px-5">
-      <div className="mb-6">
+      <div className="mb-6" data-tour="entrantes-encabezado">
         <h1 className="text-3xl font-bold">Mensajes Entrantes</h1>
         <p className="text-muted-foreground">
           Respuestas que llegan por WhatsApp y qué hizo el sistema con cada una
         </p>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2" data-tour="entrantes-filtros">
         {[
           { key: "", label: "Todos" },
           { key: "opt_out", label: "Bajas" },

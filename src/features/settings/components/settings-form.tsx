@@ -122,14 +122,14 @@ export function SettingsForm() {
 
   return (
     <div className="space-y-6">
-      <Card>
+      <Card data-tour="claves-cuenta">
         <CardHeader>
           <CardTitle>Credenciales de Twilio</CardTitle>
           <CardDescription>Cuenta, tokens y sender de WhatsApp. Los secretos se guardan cifrados.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
           <Field label="Account SID"><Input value={form.twilioAccountSid} onChange={(e) => set("twilioAccountSid", e.target.value)} placeholder="AC..." /></Field>
-          <Field label="Auth Token"><Input type="password" value={form.twilioAuthToken} onChange={(e) => set("twilioAuthToken", e.target.value)} placeholder={secretPlaceholder(flags.hasAuthToken)} /></Field>
+          <Field label="Auth Token"><Input data-tour="clave-secreta" type="password" value={form.twilioAuthToken} onChange={(e) => set("twilioAuthToken", e.target.value)} placeholder={secretPlaceholder(flags.hasAuthToken)} /></Field>
           <Field label="API Key SID"><Input value={form.twilioApiKeySid} onChange={(e) => set("twilioApiKeySid", e.target.value)} placeholder="SK..." /></Field>
           <Field label="API Key Secret"><Input type="password" value={form.twilioApiKeySecret} onChange={(e) => set("twilioApiKeySecret", e.target.value)} placeholder={secretPlaceholder(flags.hasApiKeySecret)} /></Field>
           <Field label="WhatsApp Sender (from)"><Input value={form.whatsappFrom} onChange={(e) => set("whatsappFrom", e.target.value)} placeholder="whatsapp:+1..." /></Field>
@@ -145,11 +145,11 @@ export function SettingsForm() {
           <CardDescription>Control de velocidad, webhook y cumplimiento.</CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-2">
-          <Field label="Tamaño de lote"><Input type="number" value={form.batchSize} onChange={(e) => set("batchSize", e.target.value)} placeholder="10" /></Field>
-          <Field label="Pausa entre mensajes (ms)"><Input type="number" value={form.delayMs} onChange={(e) => set("delayMs", e.target.value)} placeholder="1000" /></Field>
+          <Field label="Tamaño de lote"><Input data-tour="tamano-lote" type="number" value={form.batchSize} onChange={(e) => set("batchSize", e.target.value)} placeholder="10" /></Field>
+          <Field label="Pausa entre mensajes (ms)"><Input data-tour="pausa-mensajes" type="number" value={form.delayMs} onChange={(e) => set("delayMs", e.target.value)} placeholder="1000" /></Field>
           <Field label="URL pública del webhook"><Input value={form.webhookBaseUrl} onChange={(e) => set("webhookBaseUrl", e.target.value)} placeholder="https://tu-dominio o ngrok" /></Field>
           <Field label="Secreto del webhook"><Input type="password" value={form.webhookSecret} onChange={(e) => set("webhookSecret", e.target.value)} placeholder={secretPlaceholder(flags.hasWebhookSecret)} /></Field>
-          <div className="flex items-center gap-3 sm:col-span-2">
+          <div className="flex items-center gap-3 sm:col-span-2" data-tour="permiso-obligatorio">
             <Switch checked={form.requireOptIn} onCheckedChange={(v) => set("requireOptIn", v)} id="requireOptIn" />
             <Label htmlFor="requireOptIn">Exigir opt-in explícito antes de enviar (marketing)</Label>
           </div>
@@ -157,11 +157,11 @@ export function SettingsForm() {
       </Card>
 
       <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={handleTest} disabled={testing}>
+        <Button variant="outline" onClick={handleTest} disabled={testing} data-tour="probar-conexion">
           {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlugZap className="mr-2 h-4 w-4" />}
           Probar conexión
         </Button>
-        <Button onClick={handleSave} disabled={saving}>
+        <Button onClick={handleSave} disabled={saving} data-tour="guardar-configuracion">
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Guardar
         </Button>

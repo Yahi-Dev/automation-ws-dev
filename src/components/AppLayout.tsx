@@ -5,6 +5,7 @@ import { Separator } from './ui/separator';
 import { Breadcrumb, BreadcrumbList, BreadcrumbItem, BreadcrumbLink, BreadcrumbSeparator } from './ui/breadcrumb';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from './ui/sidebar';
 import { AppSidebar } from './app-sidebar';
+import { BotonAyuda } from '@/src/features/ayuda/components/boton-ayuda';
 
 interface BreadcrumbItem {
   title: string;
@@ -61,6 +62,11 @@ export const AppLayout = async ({
           </div>
         </header>
         {children}
+
+        {/* Ayuda guiada: boton flotante que explica la pantalla actual paso a
+            paso. Se monta aqui una sola vez para que este en TODAS las
+            pantallas sin repetirlo en cada pagina. */}
+        <BotonAyuda />
       </SidebarInset>
     </SidebarProvider>
   );

@@ -42,15 +42,15 @@ import {
 function statusBadge(status: string | null) {
   switch (status) {
     case "approved":
-      return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Aprobada</Badge>;
+      return <Badge data-tour="estado-plantilla" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Aprobada</Badge>;
     case "pending":
-      return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Pendiente</Badge>;
+      return <Badge data-tour="estado-plantilla" className="bg-amber-100 text-amber-700 hover:bg-amber-100">Pendiente</Badge>;
     case "rejected":
-      return <Badge variant="destructive">Rechazada</Badge>;
+      return <Badge data-tour="estado-plantilla" variant="destructive">Rechazada</Badge>;
     case "received":
-      return <Badge variant="outline">Creada</Badge>;
+      return <Badge data-tour="estado-plantilla" variant="outline">Creada</Badge>;
     default:
-      return <Badge variant="outline">—</Badge>;
+      return <Badge data-tour="estado-plantilla" variant="outline">—</Badge>;
   }
 }
 
@@ -144,7 +144,7 @@ export function TemplatesTable() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button variant="ghost" className="h-8 w-8 p-0" data-tour="acciones-plantilla">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

@@ -138,7 +138,7 @@ export function MessageAssignForm() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
             {/* Selección de Post - DISEÑO MEJORADO */}
-            <div className="space-y-4">
+            <div className="space-y-4" data-tour="asignar-campana">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-gray-700">
                   Seleccionar Post <span className="text-red-700">*</span>
@@ -231,7 +231,7 @@ export function MessageAssignForm() {
             </div>
 
             {/* Selección de Contactos - CON COMBOBOX MEJORADO */}
-            <div className="space-y-4">
+            <div className="space-y-4" data-tour="asignar-personas">
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label className="text-sm font-semibold text-gray-700">
@@ -390,6 +390,7 @@ export function MessageAssignForm() {
             </Link>
             <Button 
               type="submit" 
+              data-tour="asignar-guardar"
               disabled={isAssigning || !selectedPost || selectedContacts.length === 0 || posts.length === 0 || contacts.length === 0}
               className="min-w-40"
             >

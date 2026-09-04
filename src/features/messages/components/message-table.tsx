@@ -110,7 +110,7 @@ export default function MessagesTable() {
       cell: ({ row }) => {
         const contact = row.original.contact
         return (
-          <div>
+          <div data-tour="mensaje-contacto">
             <div className="font-medium">{contact.name}</div>
             <div className="text-sm text-gray-500 font-mono">{contact.phone}</div>
           </div>
@@ -123,7 +123,7 @@ export default function MessagesTable() {
       cell: ({ row }) => {
         const status = row.getValue("status") as string
         return (
-          <Badge variant={getStatusVariant(status)}>
+          <Badge variant={getStatusVariant(status)} data-tour="mensaje-estado">
             {getStatusText(status)}
           </Badge>
         )
@@ -267,7 +267,7 @@ export default function MessagesTable() {
         <p className="text-muted-foreground">Administra los mensajes asignados a contactos</p>
       </div>
 
-      <div className="mb-4 flex flex-wrap gap-2">
+      <div className="mb-4 flex flex-wrap gap-2" data-tour="mensajes-filtros">
         {[
           { key: "", label: "Todos" },
           { key: "pending", label: "Pendientes" },
