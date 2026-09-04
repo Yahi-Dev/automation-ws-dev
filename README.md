@@ -13,8 +13,10 @@ Aplicación web para **envío masivo (broadcast) de WhatsApp** a listas de conta
 
 ## Funcionalidades
 
-- Gestión de contactos (CRUD, país, import CSV, validación de número sin envío)
+- Gestión de contactos (CRUD, país, import **CSV y Excel**, validación de número sin envío)
 - Consentimiento opt-in/opt-out (STOP/BAJA entrante) con auditoría y gate en el envío
+- **Pantalla de consentimiento** (`/consentimiento`): historial completo con filtros y exportación a CSV
+- **Bandeja de entrantes** (`/entrantes`): todo mensaje recibido queda registrado, incluso de números desconocidos
 - Plantillas de WhatsApp con estado de aprobación
 - Campañas (posts) con envío por lotes, control de velocidad y tracking por mensaje
 - Reportes: enviados/entregados/leídos/fallidos, filtros y desglose por campaña

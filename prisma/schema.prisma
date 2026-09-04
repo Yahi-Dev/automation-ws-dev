@@ -100,8 +100,15 @@ model contacts {
   updatedAt DateTime? @default(now()) @updatedAt
   isDeleted Boolean  @default(false)
 
-  messages      message[]
-  consentEvents consentEvents[]
+  /// Alcanzabilidad real, deducida de los errores del proveedor. No existe
+  /// ninguna API oficial que diga si un numero tiene WhatsApp ANTES de enviar;
+  /// la unica senal fiable es el error de entrega del primer intento.
+  unreachableAt   DateTime?
+  unreachableCode String?   @db.VarChar(16)
+
+  messages        message[]
+  consentEvents   consentEvents[]
+  inboundMessages inboundMessages[]
 
   @@index([consentState])
   @@index([createdAt])
@@ -153,6 +160,34 @@ model consentEvents {
   @@map("consent_events")
 }
 
+
+/// Mensajes ENTRANTES de WhatsApp.
+///
+/// Antes no existia: el webhook de entrada leia el cuerpo solo para detectar
+/// STOP/BAJA y lo DESCARTABA. Un "quiero darme de baja" de un numero
+/// desconocido se perdia sin dejar rastro, y las respuestas de los contactos no
+/// se podian ver en ninguna parte.
+model inboundMessages {
+  id          Int      @id @default(autoincrement())
+  /// Telefono del remitente en E.164 (sin el prefijo "whatsapp:").
+  fromPhone   String   @db.VarChar(32)
+  body        String   @db.Text
+  /// SID del mensaje en el proveedor, para deduplicar reenvios.
+  providerSid String?  @unique @db.VarChar(128)
+  /// Que se hizo con el: opt_in | opt_out | ninguno | contacto_desconocido
+  handledAs   String   @default("ninguno") @db.VarChar(24)
+  /// Palabra clave detectada, si la hubo.
+  keyword     String?  @db.VarChar(64)
+  /// Contacto asociado, si el numero estaba registrado.
+  contactId   Int?
+  contact     contacts? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  receivedAt  DateTime @default(now())
+
+  @@index([receivedAt])
+  @@index([fromPhone])
+  @@index([contactId])
+  @@map("inbound_messages")
+}
 
 model posts {
   id        Int           @id @default(autoincrement())

@@ -8,7 +8,9 @@ import {
   IconBrowserShare,
   IconCalendarWeekFilled,
   IconDashboard,
+  IconInbox,
   IconSettings,
+  IconShieldCheck,
   IconTemplate,
   IconUsers,
 } from "@tabler/icons-react"
@@ -44,6 +46,8 @@ const data = {
     { title: "Posts", url: "/posts", icon: IconBrowserShare },
     { title: "Calendario", url: "/posts/calendar", icon: IconCalendarWeekFilled },
     { title: "Mensajes", url: "/messages", icon: IconBrandTelegram },
+    { title: "Entrantes", url: "/entrantes", icon: IconInbox },
+    { title: "Consentimiento", url: "/consentimiento", icon: IconShieldCheck },
     { title: "Plantillas", url: "/plantillas", icon: IconTemplate },
     { title: "Configuración", url: "/configuracion", icon: IconSettings },
   ],

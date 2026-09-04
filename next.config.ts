@@ -19,7 +19,10 @@ const nextConfig: NextConfig = {
   output: "standalone",
 
   // Paquetes solo de servidor (Node): que el bundler no intente empaquetarlos.
-  serverExternalPackages: ["bullmq", "ioredis", "pino", "@sentry/node"],
+  // exceljs (lector de .xlsx al importar contactos) es CommonJS y hace
+  // `require` dinamicos de modulos de Node: se deja fuera del bundle igual que
+  // el resto de paquetes de servidor.
+  serverExternalPackages: ["bullmq", "ioredis", "pino", "@sentry/node", "exceljs"],
   images: {
     remotePatterns: [
       ...s3RemotePattern(),

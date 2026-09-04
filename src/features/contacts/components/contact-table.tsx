@@ -260,7 +260,7 @@ export default function ContactsTable() {
           <input
             ref={fileInputRef}
             type="file"
-            accept=".csv,text/csv"
+            accept=".csv,text/csv,.xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
             className="hidden"
             onChange={handleImportChange}
           />
@@ -274,7 +274,7 @@ export default function ContactsTable() {
             ) : (
               <Upload className="mr-2 h-4 w-4" />
             )}
-            Importar CSV
+            Importar CSV o Excel
           </Button>
         </div>
       </div>

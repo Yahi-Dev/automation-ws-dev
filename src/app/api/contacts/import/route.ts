@@ -1,10 +1,10 @@
 // src/app/api/contacts/import/route.ts
-// Importa contactos desde un archivo CSV (columnas: nombre, telefono, pais).
+// Importa contactos desde un archivo CSV o Excel (.xlsx) (columnas: nombre, telefono, pais).
 // Valida y normaliza cada teléfono a E.164 con libphonenumber-js y omite duplicados.
 import { NextRequest } from "next/server";
-import Papa from "papaparse";
 import { parsePhoneNumberFromString, type CountryCode } from "libphonenumber-js";
 import { requireAuth } from "@/src/lib/authz";
+import { parseContactsFile } from "@/src/lib/import-parser";
 import { enforceApiLimit } from "@/src/lib/api-rate-limit";
 import prisma from "@/src/lib/prisma";
 import { redis } from "@/src/lib/redis";
@@ -118,14 +118,20 @@ export async function POST(req: NextRequest) {
       return HttpResponse.sendBadRequest(consentimiento.error);
     }
 
-    const text = await file.text();
-    const parsed = Papa.parse<Record<string, string>>(text, {
-      header: true,
-      skipEmptyLines: true,
-    });
-    const rows = parsed.data ?? [];
+    // El formato (CSV o .xlsx) se decide por los magic bytes del contenido, no
+    // por la extension ni por `file.type`, que los controla el cliente. Ambos
+    // backends devuelven la misma forma, asi que a partir de aqui da igual que
+    // subio el usuario.
+    // `erroresArchivo` recoge los fallos de formato (comillas sin cerrar,
+    // columnas de mas, hoja ilegible...). Antes no se leian nunca y el archivo
+    // se procesaba a medias sin decirselo a nadie.
+    const { rows, errors: erroresArchivo } = await parseContactsFile(file);
     if (rows.length === 0) {
-      return HttpResponse.sendBadRequest("El archivo no tiene filas válidas");
+      // Si el lector supo por que no hay filas (Excel dañado, .xls antiguo,
+      // archivo vacio), se le dice al usuario en vez de un mensaje generico.
+      return HttpResponse.sendBadRequest(
+        erroresArchivo[0]?.error ?? "El archivo no tiene filas válidas"
+      );
     }
     if (rows.length > MAX_IMPORT_ROWS) {
       return HttpResponse.sendBadRequest(
@@ -133,16 +139,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Errores de formato del propio CSV (comillas sin cerrar, columnas de mas...).
-    // Antes `parsed.errors` no se leia nunca y el archivo se procesaba a medias
-    // sin decirselo a nadie.
-    const erroresCsv = (parsed.errors ?? []).slice(0, 20).map((e) => ({
-      row: typeof e.row === "number" ? e.row + 2 : 0,
-      error: `Formato CSV: ${e.message}`,
-    }));
-
     const actor = gate.user.email ?? "system";
-    const errors: Array<{ row: number; error: string }> = [...erroresCsv];
+    const errors: Array<{ row: number; error: string }> = [...erroresArchivo];
     const seenPhones = new Set<string>();
 
     // Marca de tiempo unica de ESTA importacion. Se usa despues para localizar

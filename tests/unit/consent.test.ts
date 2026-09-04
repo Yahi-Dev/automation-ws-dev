@@ -27,15 +27,54 @@ describe("detectConsentKeyword", () => {
     expect(detectConsentKeyword("").type).toBeNull();
   });
 
-  // Limitaciones REALES de la implementacion actual, documentadas como tal.
-  // La tarea 5.2 del plan amplia la deteccion a frases y puntuacion; cuando se
-  // haga, estos casos pasan a esperar "opt_out" y el test falla a proposito.
-  it("[limitacion conocida] no detecta la palabra con puntuacion pegada", () => {
-    expect(detectConsentKeyword("STOP.").type).toBeNull();
+  it("detecta la palabra con puntuacion pegada", () => {
+    for (const texto of ["STOP.", "BAJA!", "¡BAJA!", "baja...", "¿alta?"]) {
+      expect(detectConsentKeyword(texto).type, texto).not.toBeNull();
+    }
+    expect(detectConsentKeyword("STOP.").type).toBe("opt_out");
+    expect(detectConsentKeyword("¡BAJA!").keyword).toBe("baja");
+    expect(detectConsentKeyword("¿alta?").type).toBe("opt_in");
   });
 
-  it("[limitacion conocida] no detecta la baja expresada como frase", () => {
-    expect(detectConsentKeyword("quiero darme de baja").type).toBeNull();
+  it("ignora los acentos al comparar", () => {
+    expect(detectConsentKeyword("no me escribas más").type).toBe("opt_out");
+    expect(detectConsentKeyword("NO ME ESCRIBAS MÁS").type).toBe("opt_out");
+  });
+
+  it("detecta la baja expresada como frase completa", () => {
+    for (const frase of [
+      "quiero darme de baja",
+      "darme de baja",
+      "no me escribas mas",
+      "dejar de recibir",
+      "unsubscribe me",
+    ]) {
+      expect(detectConsentKeyword(frase).type, frase).toBe("opt_out");
+    }
+  });
+
+  it("tolera saludos y despedidas alrededor de la frase", () => {
+    expect(detectConsentKeyword("Hola, quiero darme de baja, gracias").type).toBe("opt_out");
+    expect(detectConsentKeyword("darme de baja por favor").type).toBe("opt_out");
+  });
+
+  // La deteccion es CONSERVADORA a proposito: un falso positivo da de baja a
+  // alguien que no lo pidio, y con el opt-in exigido por defecto solo esa
+  // persona puede revertirlo escribiendo ALTA. Estos casos NO se detectan y
+  // deben seguir sin detectarse; el mensaje queda igualmente guardado en
+  // `inbound_messages` para que un humano lo revise.
+  it("no detecta la frase negada ni matizada", () => {
+    expect(detectConsentKeyword("no quiero darme de baja todavia").type).toBeNull();
+    expect(detectConsentKeyword("no quiero darme de baja").type).toBeNull();
+  });
+
+  it("no detecta la palabra mencionada de pasada en un mensaje largo", () => {
+    expect(
+      detectConsentKeyword(
+        "Buenas, me dieron de baja en el gimnasio y queria saber si el descuento sigue disponible"
+      ).type
+    ).toBeNull();
+    expect(detectConsentKeyword("me llego la factura de la baja del mes pasado").type).toBeNull();
   });
 });
 

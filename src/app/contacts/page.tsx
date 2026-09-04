@@ -3,7 +3,7 @@ import ContactsTable from '@/src/features/contacts/components/contact-table';
 import { verifyAuth } from '@/src/hooks/use-auth';
 
 const breadcrumbs = [
-  { title: 'Contacts', href: '#' },
+  { title: 'Contactos', href: '#' },
 ];
 
 const ContactsPage = async () => {
