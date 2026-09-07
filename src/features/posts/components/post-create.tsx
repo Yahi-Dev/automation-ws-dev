@@ -179,6 +179,7 @@ export function CreatePostForm() {
                 </Label>
                 <Input
                   id="friendlyName"
+                  data-tour="campana-crear-nombre"
                   type="text"
                   readOnly
                   className="bg-white"
@@ -211,7 +212,7 @@ export function CreatePostForm() {
                   disabled={isLoading}
                   required
                 >
-                  <SelectTrigger id="templateType" className="bg-white">
+                  <SelectTrigger id="templateType" data-tour="campana-crear-plantilla" className="bg-white">
                     <SelectValue placeholder="Selecciona el tipo de plantilla" />
                   </SelectTrigger>
                   <SelectContent>
@@ -234,6 +235,7 @@ export function CreatePostForm() {
                 </Label>
                 <Input
                   id="schedule"
+                  data-tour="campana-crear-fecha"
                   type="datetime-local"
                   className="bg-white"
                   value={formData.schedule}
@@ -258,6 +260,7 @@ export function CreatePostForm() {
               </Label>
               <Textarea
                 id="text"
+                data-tour="campana-crear-texto"
                 placeholder="Escribe el contenido del post aquí..."
                 className="bg-white min-h-[120px] resize-vertical"
                 value={formData.text}
@@ -271,7 +274,7 @@ export function CreatePostForm() {
                 <p className="text-sm text-gray-500">
                   Contenido del post (máximo 800 caracteres)
                 </p>
-                <Badge variant="outline" className="text-xs">
+                <Badge variant="outline" data-tour="campana-crear-contador" className="text-xs">
                   {formData.text.length}/800
                 </Badge>
               </div>
@@ -286,7 +289,7 @@ export function CreatePostForm() {
 
               <div className="space-y-4">
                 {/* Input de subida - deshabilitado si ya hay imagen */}
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-4" data-tour="campana-crear-imagen">
                   <Input
                     id="images"
                     type="file"
@@ -354,7 +357,7 @@ export function CreatePostForm() {
                 Cancelar
               </Button>
             </Link>
-            <Button type="submit" disabled={isLoading || isUploading}>
+            <Button type="submit" data-tour="campana-crear-guardar" disabled={isLoading || isUploading}>
               {(isLoading || isUploading) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />

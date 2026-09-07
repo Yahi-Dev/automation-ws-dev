@@ -241,6 +241,7 @@ export function MessageAssignForm() {
                     type="button"
                     variant="outline"
                     size="sm"
+                    data-tour="asignar-todos"
                     onClick={handleSelectAllContacts}
                     disabled={loading || contacts.length === 0}
                   >
@@ -250,7 +251,7 @@ export function MessageAssignForm() {
                 <p className="text-sm text-gray-500">
                   Elige los contactos que recibirán este mensaje
                 </p>
-                <div className="text-sm text-gray-600">
+                <div className="text-sm text-gray-600" data-tour="asignar-contador">
                   Seleccionados: {selectedContacts.length} de {contacts.length}
                 </div>
 
@@ -260,6 +261,7 @@ export function MessageAssignForm() {
                     <Button
                       variant="outline"
                       role="combobox"
+                      data-tour="asignar-buscador"
                       aria-expanded={contactSearchOpen}
                       className="w-full justify-between"
                     >
@@ -317,7 +319,7 @@ export function MessageAssignForm() {
                   ))}
                 </div>
               ) : (
-                <ScrollArea className="h-48 border rounded-lg">
+                <ScrollArea className="h-48 border rounded-lg" data-tour="asignar-lista-personas">
                   <div className="p-2 space-y-2">
                     {contacts.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">

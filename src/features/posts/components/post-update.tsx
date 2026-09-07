@@ -209,6 +209,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
                 </Label>
                 <Input
                   id="schedule"
+                  data-tour="campana-editar-fecha"
                   type="datetime-local"
                   className="bg-white"
                   value={formData.schedule}
@@ -232,6 +233,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
                 </Label>
                 <Textarea
                   id="text"
+                  data-tour="campana-editar-texto"
                   placeholder="Escribe el contenido del post aquí..."
                   className="bg-white min-h-[120px] resize-vertical"
                   value={formData.text}
@@ -245,7 +247,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
                   <p className="text-sm text-gray-500">
                     Contenido del post (máximo 1000 caracteres)
                   </p>
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" data-tour="campana-editar-contador" className="text-xs">
                     {formData.text.length}/1000
                   </Badge>
                 </div>
@@ -259,7 +261,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
                 
                 <div className="space-y-4">
                   {/* Input de subida - deshabilitado si ya hay imagen */}
-                  <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4" data-tour="campana-editar-imagen">
                     <Input
                       id="images"
                       type="file"
@@ -330,11 +332,11 @@ export function EditPostForm({ id }: EditPostFormProps) {
 
             <div className="flex justify-end gap-4 mt-8">
               <Link href="/posts">
-                <Button variant="outline" type="button" disabled={isLoading}>
+                <Button variant="outline" type="button" data-tour="campana-editar-cancelar" disabled={isLoading}>
                   Cancelar
                 </Button>
               </Link>
-              <Button type="submit" disabled={isLoading || isUploading}>
+              <Button type="submit" data-tour="campana-editar-guardar" disabled={isLoading || isUploading}>
                 {(isLoading || isUploading) ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

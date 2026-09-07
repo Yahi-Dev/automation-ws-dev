@@ -131,7 +131,29 @@ describe("recorridoDeRuta", () => {
   });
 
   it("encuentra el recorrido desde una subruta", () => {
-    expect(recorridoDeRuta("/contacts/create")?.nombre).toBe("Contactos");
+    // Una subruta SIN recorrido propio cae en la ayuda de su pantalla madre.
+    expect(recorridoDeRuta("/contacts/7")?.nombre).toBe("Contactos");
+  });
+
+  it("un formulario con recorrido propio gana al prefijo de su pantalla madre", () => {
+    // Si ganara "/contacts", quien pulsa "Explicar" dentro del formulario
+    // recibiria la explicacion de la lista de contactos y ni una sola palabra
+    // sobre que escribir en las casillas que tiene delante.
+    expect(recorridoDeRuta("/contacts/create")?.nombre).toBe("Nuevo contacto");
+  });
+
+  it("una ruta con comodin encaja con el numero real del navegador", () => {
+    // El pathname trae el id del contacto ("/contacts/7/edit"); el recorrido se
+    // declara con corchetes ("/contacts/[id]/edit").
+    expect(recorridoDeRuta("/contacts/7/edit")?.nombre).toBe("Editar contacto");
+    expect(recorridoDeRuta("/contacts/1234/edit")?.nombre).toBe("Editar contacto");
+  });
+
+  it("el comodin vale por un solo tramo, no por varios", () => {
+    // Sin este limite, cualquier pantalla colgada de un contacto se llevaria la
+    // ayuda de editar y explicaria casillas que no estan ahi.
+    expect(recorridoDeRuta("/contacts/7/mensajes/edit")?.nombre).toBe("Contactos");
+    expect(recorridoDeRuta("/contacts//edit")?.nombre).toBe("Contactos");
   });
 
   it("no devuelve nada para una ruta desconocida o vacia", () => {
@@ -146,10 +168,32 @@ describe("indice del manual: que se ofrece a cada rol", () => {
   // quien lo usa acaba en una redireccion al inicio y cree que se equivoco.
   const SOLO_ADMIN = ["Usuarios", "Configuración"];
 
+  /**
+   * El indice ofrece PANTALLAS, no formularios.
+   *
+   * A un formulario (asignar destinatarios, crear contacto...) se llega desde
+   * otra pantalla, con su boton correspondiente. Si el indice lo ofreciera
+   * suelto, llevaria a un formulario vacio y sin contexto, asi que esos
+   * recorridos se marcan con `fueraDelIndice` y no cuentan aqui.
+   */
+  const EN_EL_INDICE = RECORRIDOS.filter((r) => !r.fueraDelIndice);
+
   it("el administrador ve el manual entero", () => {
     expect(recorridosVisibles("admin").map((r) => r.nombre)).toEqual(
-      RECORRIDOS.map((r) => r.nombre)
+      EN_EL_INDICE.map((r) => r.nombre)
     );
+  });
+
+  it("los formularios no salen como entrada suelta del indice", () => {
+    const fuera = RECORRIDOS.filter((r) => r.fueraDelIndice).map((r) => r.nombre);
+    for (const rol of ["admin", "user", undefined]) {
+      const nombres = recorridosVisibles(rol).map((r) => r.nombre);
+      for (const formulario of fuera) {
+        expect(nombres, `${formulario} no deberia salir en el indice`).not.toContain(
+          formulario
+        );
+      }
+    }
   });
 
   it("quien no es administrador no ve las pantallas de administrador", () => {
@@ -163,7 +207,7 @@ describe("indice del manual: que se ofrece a cada rol", () => {
 
   it("no se le esconde nada mas de la cuenta a quien no es administrador", () => {
     const nombres = recorridosVisibles("user").map((r) => r.nombre);
-    const esperados = RECORRIDOS.map((r) => r.nombre).filter(
+    const esperados = EN_EL_INDICE.map((r) => r.nombre).filter(
       (n) => !SOLO_ADMIN.includes(n)
     );
     expect(nombres).toEqual(esperados);

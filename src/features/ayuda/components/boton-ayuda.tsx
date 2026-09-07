@@ -230,7 +230,7 @@ function BotonAyudaInterno() {
       title={recorrido.resumen}
     >
       <HelpCircle className="h-5 w-5" aria-hidden="true" />
-      ¿Cómo funciona?
+      {recorrido.etiquetaBoton ?? "¿Cómo funciona?"}
     </button>
   );
 }

@@ -79,6 +79,15 @@ type CountrySelectProps = {
   onChange: (country: RPNInput.Country) => void;
 };
 
+/**
+ * Selector de pais del telefono (la bandera con la flecha).
+ *
+ * El boton que lo abre lleva `data-tour="contacto-pais"`: el manual guiado lo
+ * senala para explicar que el numero necesita el codigo del pais, que es el
+ * error que hace que los mensajes no lleguen. El atributo es solo una marca
+ * estable para la ayuda; no cambia el comportamiento. Ver
+ * src/features/ayuda/recorridos/contacto-formulario.ts.
+ */
 const CountrySelect = ({
   disabled,
   value: selectedCountry,
@@ -102,6 +111,7 @@ const CountrySelect = ({
         <Button
           type="button"
           variant="outline"
+          data-tour="contacto-pais"
           className="flex gap-1 rounded-e-none rounded-s-lg border-r-0 px-3 focus:z-10"
           disabled={disabled}
         >

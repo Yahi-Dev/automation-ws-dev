@@ -45,5 +45,21 @@ export type RecorridoAyuda = {
    * que se OFRECE; el permiso de verdad lo decide el servidor en cada pantalla.
    */
   soloAdmin?: boolean;
+  /**
+   * Texto del boton flotante en esta pantalla.
+   *
+   * Por defecto dice "¿Cómo funciona?", que encaja con una pantalla de listado.
+   * En los formularios se pone "Explicar", porque ahi lo que se pide no es un
+   * repaso de la pantalla sino que le digan QUE ESCRIBIR en cada casilla.
+   */
+  etiquetaBoton?: string;
+  /**
+   * Excluye el recorrido del indice del manual.
+   *
+   * Los formularios se abren DESDE otra pantalla (con el boton de "Nuevo"), asi
+   * que ofrecerlos como entrada suelta del indice llevaria a un formulario vacio
+   * sin contexto. Su ayuda se pide con el boton "Explicar" una vez dentro.
+   */
+  fueraDelIndice?: boolean;
   pasos: PasoAyuda[];
 };

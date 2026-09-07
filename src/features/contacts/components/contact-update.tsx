@@ -174,6 +174,7 @@ export function EditContactForm({ id }: EditContactFormProps) {
                 </Label>
                 <Input
                   id="name"
+                  data-tour="contacto-editar-nombre"
                   placeholder="Ej: Juan Pérez, María García..."
                   className="bg-white"
                   value={formData.name}
@@ -197,7 +198,7 @@ export function EditContactForm({ id }: EditContactFormProps) {
                 </p>
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2" data-tour="contacto-editar-telefono">
                 <Label htmlFor="phone" className="text-sm font-semibold text-gray-700">
                   Teléfono <span className="text-red-700">*</span>
                 </Label>
@@ -210,7 +211,10 @@ export function EditContactForm({ id }: EditContactFormProps) {
                   />
 
                 {errors.phone && <p className="text-sm text-red-600">{errors.phone}</p>}
-                <p className={formData._count > 0 ? "text-sm text-red-300" : "text-sm text-gray-500"}>
+                <p
+                  data-tour="contacto-editar-aviso-telefono"
+                  className={formData._count > 0 ? "text-sm text-red-300" : "text-sm text-gray-500"}
+                >
                   {formData._count > 0 ? "No se puede modificar el teléfono de un contacto con mensajes asignados" : "máximo 20 caracteres"}
                 </p>
               </div>
@@ -218,11 +222,11 @@ export function EditContactForm({ id }: EditContactFormProps) {
 
             <div className="flex justify-end gap-4 mt-8">
               <Link href="/contacts">
-                <Button variant="outline" type="button" disabled={isLoading}>
+                <Button variant="outline" type="button" data-tour="contacto-editar-cancelar" disabled={isLoading}>
                   Cancelar
                 </Button>
               </Link>
-              <Button type="submit" disabled={isLoading}>
+              <Button type="submit" data-tour="contacto-editar-guardar" disabled={isLoading}>
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

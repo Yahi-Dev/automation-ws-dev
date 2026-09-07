@@ -7,8 +7,17 @@
 import type { RecorridoAyuda } from "./tipos";
 import { recorridoDashboard } from "./recorridos/dashboard";
 import { recorridoContactos } from "./recorridos/contactos";
+import {
+  recorridoContactoCrear,
+  recorridoContactoEditar,
+} from "./recorridos/contacto-formulario";
 import { recorridoCampanas } from "./recorridos/campanas";
+import {
+  recorridoCampanaCrear,
+  recorridoCampanaEditar,
+} from "./recorridos/campana-formulario";
 import { recorridoMensajes } from "./recorridos/mensajes";
+import { recorridoAsignar } from "./recorridos/asignar-formulario";
 import { recorridoEntrantes } from "./recorridos/entrantes";
 import { recorridoConsentimiento } from "./recorridos/consentimiento";
 import { recorridoPlantillas } from "./recorridos/plantillas";
@@ -24,8 +33,23 @@ import { recorridoUsuarios } from "./recorridos/usuarios";
  */
 export const RECORRIDOS: RecorridoAyuda[] = [
   recorridoDashboard,
+  // Antes que "/contacts", por la misma razon: "/contacts/create" tambien encaja
+  // con "/contacts" en la busqueda por prefijo. El de editar ademas lleva
+  // comodin ("/contacts/[id]/edit"), que se prueba antes que los prefijos.
+  recorridoContactoCrear,
+  recorridoContactoEditar,
   recorridoContactos,
+  // Los dos formularios de campana van antes que "/posts" por lo mismo:
+  // "/posts/create" tambien encaja con "/posts" en la busqueda por prefijo, y
+  // el de editar ("/posts/[id]/edit") es un patron con comodin, que se prueba
+  // antes que los prefijos.
+  recorridoCampanaCrear,
+  recorridoCampanaEditar,
   recorridoCampanas,
+  // Antes que "/messages": aunque `recorridoDeRuta` prueba primero la
+  // coincidencia exacta, la busqueda por prefijo se queda con el primero que
+  // encaje, y "/messages" tambien encaja con "/messages/assign".
+  recorridoAsignar,
   recorridoMensajes,
   recorridoEntrantes,
   recorridoConsentimiento,
@@ -55,10 +79,41 @@ const RUTAS_SOLO_ADMIN = ["/configuracion", "/usuarios"];
  * un camino cerrado.
  */
 export function recorridosVisibles(rol?: string): RecorridoAyuda[] {
-  if (rol === "admin") return RECORRIDOS;
+  if (rol === "admin") return RECORRIDOS.filter((r) => !r.fueraDelIndice);
 
   return RECORRIDOS.filter(
-    (r) => !r.soloAdmin && !RUTAS_SOLO_ADMIN.includes(r.ruta)
+    (r) => !r.fueraDelIndice && !r.soloAdmin && !RUTAS_SOLO_ADMIN.includes(r.ruta)
+  );
+}
+
+/**
+ * ¿La ruta del recorrido lleva un tramo con comodin, al estilo de Next?
+ *
+ * Las pantallas que trabajan sobre un registro concreto se escriben con
+ * corchetes ("/contacts/[id]/edit"), porque el numero cambia en cada contacto.
+ */
+const esPatron = (ruta: string) => ruta.includes("[");
+
+/**
+ * Compara un patron con la ruta REAL del navegador, tramo a tramo.
+ *
+ * El navegador enseña "/contacts/7/edit", nunca "/contacts/[id]/edit", asi que
+ * sin esto la pantalla de editar se quedaba con la ayuda de la lista de
+ * contactos (que gana por prefijo) y quien pulsaba "Explicar" dentro del
+ * formulario recibia la explicacion de otra pantalla.
+ *
+ * Un tramo entre corchetes vale por UNO cualquiera, ni mas ni menos: encaja con
+ * "/contacts/7/edit" pero no con "/contacts/7/mensajes/edit".
+ */
+function encajaConPatron(patron: string, ruta: string): boolean {
+  const tramosPatron = patron.split("/");
+  const tramosRuta = ruta.split("/");
+  if (tramosPatron.length !== tramosRuta.length) return false;
+
+  return tramosPatron.every((tramo, i) =>
+    tramo.startsWith("[") && tramo.endsWith("]")
+      ? tramosRuta[i].length > 0
+      : tramo === tramosRuta[i]
   );
 }
 
@@ -70,7 +125,20 @@ export function recorridoDeRuta(ruta: string | null): RecorridoAyuda | null {
   const exacto = RECORRIDOS.find((r) => r.ruta === ruta);
   if (exacto) return exacto;
 
+  // Despues los patrones con comodin, SIEMPRE antes que los prefijos: son mas
+  // concretos, y si se probaran al final "/contacts/7/edit" ya se lo habria
+  // llevado "/contacts".
+  const patron = RECORRIDOS.find(
+    (r) => esPatron(r.ruta) && encajaConPatron(r.ruta, ruta)
+  );
+  if (patron) return patron;
+
+  // Y por ultimo el prefijo de siempre, como estaba. Los patrones se descartan
+  // aqui porque un pathname real nunca lleva corchetes: no encajarian nunca y
+  // solo harian ruido.
   return (
-    RECORRIDOS.find((r) => r.ruta !== "/" && ruta.startsWith(r.ruta)) ?? null
+    RECORRIDOS.find(
+      (r) => r.ruta !== "/" && !esPatron(r.ruta) && ruta.startsWith(r.ruta)
+    ) ?? null
   );
 }
