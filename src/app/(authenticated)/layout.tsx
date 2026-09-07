@@ -1,6 +1,7 @@
 // app/(authenticated)/layout.tsx
 import { AppSidebar } from "@/src/components/app-sidebar";
 import { SiteHeader } from "@/src/components/site-header";
+import { BotonAyuda } from "@/src/features/ayuda/components/boton-ayuda";
 import { SidebarInset, SidebarProvider } from "@/src/components/ui/sidebar";
 import { auth } from "@/src/lib/auth";
 import { headers } from "next/headers";
@@ -41,6 +42,13 @@ export default async function AuthenticatedLayout({children,}: {children: React.
             {children}
           </div>
         </div>
+
+        {/* Ayuda guiada. Hace falta AQUI ademas de en AppLayout: las pantallas
+            de este grupo (inicio, plantillas, configuracion, usuarios) no pasan
+            por AppLayout, asi que sin esto se quedaban sin boton flotante y,
+            peor, el indice del manual las abria con `?ayuda=1` y no arrancaba
+            nada: la persona pulsaba en el manual y no pasaba nada. */}
+        <BotonAyuda />
       </SidebarInset>
     </SidebarProvider>
   );

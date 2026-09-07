@@ -17,6 +17,7 @@ import {
 
 import { NavMain } from "@/src/components/nav-main"
 import { NavUser } from "@/src/components/nav-user"
+import { BotonManual } from "@/src/features/ayuda/components/boton-manual"
 import { Sidebar, SidebarContent, SidebarFooter, SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@/src/components/ui/sidebar"
 import { AudioWaveform, Command, GalleryVerticalEnd } from "lucide-react"
 import Image from "next/image"
@@ -49,7 +50,14 @@ const data = {
     { title: "Entrantes", url: "/entrantes", icon: IconInbox },
     { title: "Consentimiento", url: "/consentimiento", icon: IconShieldCheck },
     { title: "Plantillas", url: "/plantillas", icon: IconTemplate },
+  ],
+  // Solo para administradores. `Configuración` estaba en el menú general, pero
+  // su API exige rol de administrador: quien no lo fuera veía la opción, entraba
+  // y se encontraba un formulario que falla al guardar. El manual ya la ocultaba
+  // correctamente; el desajuste estaba aquí.
+  navAdmin: [
     { title: "Configuración", url: "/configuracion", icon: IconSettings },
+    { title: "Usuarios", url: "/usuarios", icon: IconUsers },
   ],
 }
 
@@ -60,9 +68,7 @@ export function AppSidebar({
   ...props
 }: React.ComponentProps<typeof Sidebar> & { user: AppSidebarUser }) {
   const navMain =
-    user.role === "admin"
-      ? [...data.navMain, { title: "Usuarios", url: "/usuarios", icon: IconUsers }]
-      : data.navMain;
+    user.role === "admin" ? [...data.navMain, ...data.navAdmin] : data.navMain;
 
   return (
     <Sidebar
@@ -97,6 +103,7 @@ export function AppSidebar({
         <NavMain items={navMain} />
       </SidebarContent>
       <SidebarFooter className="border-t border-gray-100 px-3 py-4">
+        <BotonManual rol={user.role} />
         <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>

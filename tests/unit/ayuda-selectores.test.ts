@@ -1,7 +1,11 @@
 import { describe, it, expect } from "vitest";
-import { readdirSync, readFileSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { RECORRIDOS, recorridoDeRuta } from "@/src/features/ayuda/recorridos";
+import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
+import { dirname, join } from "node:path";
+import {
+  RECORRIDOS,
+  recorridoDeRuta,
+  recorridosVisibles,
+} from "@/src/features/ayuda/recorridos";
 
 /**
  * El manual guiado apunta a elementos del marcado con selectores CSS.
@@ -135,4 +139,116 @@ describe("recorridoDeRuta", () => {
     expect(recorridoDeRuta(null)).toBeNull();
     expect(recorridoDeRuta("")).toBeNull();
   });
+});
+
+describe("indice del manual: que se ofrece a cada rol", () => {
+  // El indice no es un control de acceso, pero si ofrece una pantalla cerrada,
+  // quien lo usa acaba en una redireccion al inicio y cree que se equivoco.
+  const SOLO_ADMIN = ["Usuarios", "Configuración"];
+
+  it("el administrador ve el manual entero", () => {
+    expect(recorridosVisibles("admin").map((r) => r.nombre)).toEqual(
+      RECORRIDOS.map((r) => r.nombre)
+    );
+  });
+
+  it("quien no es administrador no ve las pantallas de administrador", () => {
+    for (const rol of ["user", undefined]) {
+      const nombres = recorridosVisibles(rol).map((r) => r.nombre);
+      for (const reservada of SOLO_ADMIN) {
+        expect(nombres, `rol ${rol} no deberia ver ${reservada}`).not.toContain(reservada);
+      }
+    }
+  });
+
+  it("no se le esconde nada mas de la cuenta a quien no es administrador", () => {
+    const nombres = recorridosVisibles("user").map((r) => r.nombre);
+    const esperados = RECORRIDOS.map((r) => r.nombre).filter(
+      (n) => !SOLO_ADMIN.includes(n)
+    );
+    expect(nombres).toEqual(esperados);
+  });
+
+  it("un rol desconocido se trata como el mas restrictivo", () => {
+    // Si manana el campo trae "ADMIN", "owner" o una cadena vacia, lo peor que
+    // puede pasar es que sobre una entrada; nunca que se ofrezca de mas.
+    for (const rol of ["ADMIN", "owner", ""]) {
+      const nombres = recorridosVisibles(rol).map((r) => r.nombre);
+      for (const reservada of SOLO_ADMIN) {
+        expect(nombres).not.toContain(reservada);
+      }
+    }
+  });
+});
+
+/**
+ * Resuelve la carpeta de src/app que pinta una ruta.
+ *
+ * Los grupos de rutas de Next (`(authenticated)`, `(guest)`) no forman parte de
+ * la URL, asi que "/usuarios" puede vivir en "src/app/(authenticated)/usuarios".
+ */
+function carpetaDeRuta(ruta: string): string | null {
+  const segmentos = ruta.split("/").filter(Boolean);
+
+  let candidatos = [join(process.cwd(), "src", "app")];
+  for (const segmento of segmentos) {
+    const siguientes: string[] = [];
+    for (const base of candidatos) {
+      const directo = join(base, segmento);
+      if (existsSync(directo)) siguientes.push(directo);
+
+      // Un nivel de grupo de rutas entre medias.
+      for (const entrada of readdirSync(base)) {
+        if (!entrada.startsWith("(")) continue;
+        const dentro = join(base, entrada, segmento);
+        if (existsSync(dentro)) siguientes.push(dentro);
+      }
+    }
+    if (siguientes.length === 0) return null;
+    candidatos = siguientes;
+  }
+
+  return candidatos.find((c) => existsSync(join(c, "page.tsx"))) ?? null;
+}
+
+/**
+ * El recorrido solo existe si alguien monta <BotonAyuda /> en esa pantalla, ya
+ * sea la propia pagina (via AppLayout) o un layout por encima.
+ */
+function tieneAyudaMontada(carpeta: string): boolean {
+  const pagina = readFileSync(join(carpeta, "page.tsx"), "utf8");
+  if (pagina.includes("AppLayout") || pagina.includes("BotonAyuda")) return true;
+
+  const raiz = join(process.cwd(), "src", "app");
+  let actual = carpeta;
+  while (actual.startsWith(raiz)) {
+    const layout = join(actual, "layout.tsx");
+    if (existsSync(layout) && readFileSync(layout, "utf8").includes("BotonAyuda")) {
+      return true;
+    }
+    if (actual === raiz) break;
+    actual = dirname(actual);
+  }
+  return false;
+}
+
+describe("cada recorrido llega a una pantalla que sabe lanzarlo", () => {
+  /**
+   * Este test cubre un fallo que ya ocurrio y que no se ve por ningun lado: un
+   * recorrido perfecto, registrado y ofrecido en el indice, apuntando a una
+   * pantalla que no monta <BotonAyuda />. El indice llevaba alli con `?ayuda=1`
+   * y no arrancaba nada; para quien lo usa, el manual simplemente "no hace
+   * nada" y no hay forma de adivinar por que.
+   */
+  for (const recorrido of RECORRIDOS) {
+    it(`${recorrido.nombre} -> ${recorrido.ruta}`, () => {
+      const carpeta = carpetaDeRuta(recorrido.ruta);
+      expect(carpeta, `no hay ninguna pantalla en ${recorrido.ruta}`).not.toBeNull();
+      expect(
+        tieneAyudaMontada(carpeta as string),
+        `${recorrido.ruta} no monta <BotonAyuda />: el recorrido no arrancaria ` +
+          "ni desde el boton flotante ni desde el indice del manual."
+      ).toBe(true);
+    });
+  }
 });

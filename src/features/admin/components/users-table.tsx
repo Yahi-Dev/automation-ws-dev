@@ -45,9 +45,25 @@ const FILTERS = [
 const CORREO_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function statusBadge(s: string) {
-  if (s === "approved") return <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">Aprobado</Badge>;
-  if (s === "rejected") return <Badge variant="destructive">Rechazado</Badge>;
-  return <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100">Pendiente</Badge>;
+  // El data-tour va en las tres variantes: el manual guiado resalta la primera
+  // que aparezca en la tabla, sea cual sea el estado de esa fila.
+  if (s === "approved")
+    return (
+      <Badge data-tour="usuarios-estado" className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+        Aprobado
+      </Badge>
+    );
+  if (s === "rejected")
+    return (
+      <Badge data-tour="usuarios-estado" variant="destructive">
+        Rechazado
+      </Badge>
+    );
+  return (
+    <Badge data-tour="usuarios-estado" className="bg-amber-100 text-amber-700 hover:bg-amber-100">
+      Pendiente
+    </Badge>
+  );
 }
 
 // Recuadro con el enlace de invitación, para cuando el correo no se pudo enviar.
@@ -192,7 +208,11 @@ export function UsersTable() {
     {
       accessorKey: "role",
       header: "Rol",
-      cell: ({ row }) => <Badge variant="outline">{(row.getValue("role") as string) === "admin" ? "Admin" : "Usuario"}</Badge>,
+      cell: ({ row }) => (
+        <Badge data-tour="usuarios-rol" variant="outline">
+          {(row.getValue("role") as string) === "admin" ? "Admin" : "Usuario"}
+        </Badge>
+      ),
     },
     {
       id: "actions",
@@ -203,7 +223,7 @@ export function UsersTable() {
         return (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0">
+              <Button data-tour="usuarios-acciones" variant="ghost" className="h-8 w-8 p-0">
                 <MoreHorizontal className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
@@ -246,7 +266,7 @@ export function UsersTable() {
 
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div data-tour="usuarios-filtros" className="flex gap-2">
         {FILTERS.map((f) => (
           <Button
             key={f.key || "all"}

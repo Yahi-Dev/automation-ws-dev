@@ -35,5 +35,15 @@ export type RecorridoAyuda = {
   nombre: string;
   /** Frase de una linea que resume para que sirve la pantalla. */
   resumen: string;
+  /**
+   * Marca la pantalla como reservada al administrador.
+   *
+   * Sirve para NO ofrecer en el indice del manual pantallas en las que esa
+   * persona no puede entrar: pulsar una entrada que acaba en "no tienes
+   * permiso" (o en una redireccion al inicio) hace que el manual parezca roto,
+   * y quien lo usa da por hecho que se equivoco ella. Es solo un filtro de lo
+   * que se OFRECE; el permiso de verdad lo decide el servidor en cada pantalla.
+   */
+  soloAdmin?: boolean;
   pasos: PasoAyuda[];
 };
