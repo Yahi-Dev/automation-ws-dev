@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { nextCookies } from "better-auth/next-js";
 import prisma from "./prisma";
-import redis from "./redis";
+import redis, { redisDisponible } from "./redis";
 import { sendEmail } from "./mailer";
 import { consumirMarcaInvitacion, guardarEnlace, tomarEnlace } from "./invitaciones";
 import { invitationEmailTemplate, invitationEmailText, passwordUpdatedTemplate, passwordUpdatedText, resetPasswordTemplate, resetPasswordText, verificationEmailTemplate, verificationEmailText } from "@/src/utils/email-templates";
@@ -15,23 +15,38 @@ export const auth = betterAuth({
   database: prismaAdapter(prisma, { provider: "mysql" }),
   baseURL: process.env.BETTER_AUTH_URL,
 
-  // Caché de sesiones en Redis (resiliente: cae a memoria por proceso si no hay Redis).
-  // La DB sigue siendo la fuente de verdad (storeSessionInDatabase), así que en
-  // multi-instancia las sesiones se resuelven aunque Redis esté caído; cuando está
-  // disponible, evita ir a la DB en cada request (menos carga a escala).
-  secondaryStorage: {
-    get: async (key) => {
-      const v = await redis.get<unknown>(`ba:${key}`);
-      if (v === null || v === undefined) return null;
-      return typeof v === "string" ? v : JSON.stringify(v);
-    },
-    set: async (key, value, ttl) => {
-      await redis.set(`ba:${key}`, value, ttl ? { ex: ttl } : undefined);
-    },
-    delete: async (key) => {
-      await redis.del(`ba:${key}`);
-    },
-  },
+  // Caché en Redis SOLO si hay un Redis de verdad.
+  //
+  // Esto no es una optimizacion: es correccion. better-auth guarda en
+  // `secondaryStorage` no solo la cache de sesiones, sino tambien los TOKENS de
+  // verificacion (invitaciones y "olvide mi contrasena"). Y `SafeRedis` degrada
+  // de forma transparente a un mapa EN MEMORIA DEL PROCESO cuando no hay Upstash.
+  //
+  // En un despliegue serverless cada peticion puede caer en un proceso distinto:
+  // el token se escribia en el proceso A y se buscaba en el B, donde no existia.
+  // Resultado: todo enlace de invitacion o de recuperacion moria con
+  // "Enlace no valido", aunque el correo hubiera salido bien.
+  //
+  // Sin Redis real, la fuente de verdad es la base de datos, que si es
+  // compartida. Al definir UPSTASH_REDIS_REST_URL/_TOKEN se recupera la cache
+  // sin tocar codigo.
+  ...(redisDisponible()
+    ? {
+        secondaryStorage: {
+          get: async (key: string) => {
+            const v = await redis.get<unknown>(`ba:${key}`);
+            if (v === null || v === undefined) return null;
+            return typeof v === "string" ? v : JSON.stringify(v);
+          },
+          set: async (key: string, value: string, ttl?: number) => {
+            await redis.set(`ba:${key}`, value, ttl ? { ex: ttl } : undefined);
+          },
+          delete: async (key: string) => {
+            await redis.del(`ba:${key}`);
+          },
+        },
+      }
+    : {}),
 
   session: {
     // Mantener la sesión también en la DB: fuente de verdad + resiliencia del fallback.
@@ -45,7 +60,9 @@ export const auth = betterAuth({
     enabled: true,
     window: 60, // segundos
     max: 30, // peticiones por ventana por IP
-    storage: "secondary-storage",
+    // Mismo motivo: sin Redis real, "secondary-storage" seria un contador por
+    // proceso, es decir, ningun limite efectivo en serverless.
+    storage: redisDisponible() ? "secondary-storage" : "database",
     customRules: {
       "/sign-in/email": { window: 60, max: 10 },
       "/sign-up/email": { window: 60, max: 5 },
