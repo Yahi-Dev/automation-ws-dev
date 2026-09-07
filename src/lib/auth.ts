@@ -5,7 +5,8 @@ import { nextCookies } from "better-auth/next-js";
 import prisma from "./prisma";
 import redis from "./redis";
 import { sendEmail } from "./mailer";
-import { passwordUpdatedTemplate, passwordUpdatedText, resetPasswordTemplate, resetPasswordText, verificationEmailTemplate, verificationEmailText } from "@/src/utils/email-templates";
+import { consumirMarcaInvitacion, guardarEnlace, tomarEnlace } from "./invitaciones";
+import { invitationEmailTemplate, invitationEmailText, passwordUpdatedTemplate, passwordUpdatedText, resetPasswordTemplate, resetPasswordText, verificationEmailTemplate, verificationEmailText } from "@/src/utils/email-templates";
 
 
 const logoUrl = process.env.NEXT_PUBLIC_APP_URL_LOGO;
@@ -122,6 +123,44 @@ export const auth = betterAuth({
     requireEmailVerification: false, // Desactiva porque manejas la verificación manualmente
 
     sendResetPassword: async ({ user, url }) => {
+      // El correo de INVITACION y el de RESTABLECER contrasena usan el mismo
+      // mecanismo de better-auth (token que caduca y de un solo uso); lo unico
+      // que cambia es el texto. Se distinguen aqui porque better-auth genera el
+      // enlace por dentro y este es el unico punto donde se ve.
+      //
+      // Quien invita lo DECLARA (`marcarInvitacion`) justo antes de pedir el
+      // enlace; aqui se consume esa marca. No se deduce del estado de la
+      // cuenta: `temporaryPassword` nace en `true` y `lastLogin` no lo escribe
+      // nadie, asi que cualquier usuario antiguo que pulsara "olvide mi
+      // contrasena" habria recibido el correo de invitacion.
+      // Sin marca = restablecimiento normal.
+      const esInvitacion = consumirMarcaInvitacion(user.email);
+
+      if (esInvitacion) {
+        // Se guarda ANTES de enviar. Si el envio falla, el enlace sigue en el
+        // almacen efimero y el endpoint que invito puede devolverselo al
+        // administrador para que lo comparta a mano (hoy no hay SMTP).
+        guardarEnlace(user.email, url);
+
+        await sendEmail({
+          to: user.email,
+          subject: "Te han invitado a Automation WS",
+          html: invitationEmailTemplate({
+            link: url,
+            userName: user?.name ?? "Cliente",
+            appName: "Automation WS",
+            logoUrl: logoUrl,
+            supportEmail: "soporte@tu-dominio.com",
+          }),
+          text: invitationEmailText({ link: url, appName: "Automation WS", userName: user?.name ?? "Cliente" }),
+        });
+
+        // El correo salio: el enlace ya no hace falta en memoria. Su AUSENCIA
+        // es justo lo que le dice al endpoint que no hace falta ensenarlo.
+        tomarEnlace(user.email);
+        return;
+      }
+
       const html = resetPasswordTemplate({
         url,
         userName: user?.name ?? "Cliente",
@@ -138,6 +177,14 @@ export const auth = betterAuth({
       });
     },
     onPasswordReset: async ({ user }) => {
+      // La contrasena ya es SUYA: deja de ser provisional. Es lo que mira el
+      // endpoint de reenvio para no volver a invitar a quien ya estreno la
+      // cuenta, y lo que hace que la tabla deje de ofrecer «Reenviar
+      // invitacion» para esa persona.
+      await prisma.user
+        .update({ where: { email: user.email }, data: { temporaryPassword: false } })
+        .catch(() => null);
+
       const html = passwordUpdatedTemplate({
         userName: user?.name ?? "Cliente",
         appName: "Automation WS",
@@ -145,11 +192,22 @@ export const auth = betterAuth({
         supportEmail: "soporte@tu-dominio.com",
       });
 
+      // El aviso de cortesia NO puede tumbar el cambio de contrasena.
+      // better-auth invoca este callback DESPUES de guardar la contrasena y de
+      // consumir el token, y sin protegerlo: si `sendEmail` lanza (hoy, sin SMTP
+      // configurado, lanza siempre) el endpoint responde error, la persona lee
+      // "no se pudo crear la contrasena" y vuelve a intentarlo con un enlace que
+      // ya esta gastado. Es decir: la contrasena estaba puesta y la dejabamos
+      // fuera igualmente. Se registra el fallo y se sigue.
       await sendEmail({
         to: user.email,
         subject: "Contraseña actualizada",
         html,
         text: passwordUpdatedText({ appName: "Automation WS" }),
+      }).catch((error: unknown) => {
+        console.error("No se pudo enviar el aviso de contraseña actualizada", {
+          error: error instanceof Error ? error.message : "Error desconocido",
+        });
       });
     },
   },

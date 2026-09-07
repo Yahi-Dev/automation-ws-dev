@@ -18,7 +18,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:ci": "vitest run --reporter=dot",
-    "db:bootstrap-admin": "tsx src/seed/bootstrap-admin.ts"
+    "db:bootstrap-admin": "tsx src/seed/bootstrap-admin.ts",
+    "probar:correo": "tsx src/scripts/probar-correo.ts"
   },
   "prisma": {
     "seed": "tsx src/seed/database_seeder.ts"

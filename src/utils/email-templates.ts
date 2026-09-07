@@ -1,5 +1,24 @@
 // utils/email-templates.ts
 
+/**
+ * Escapa un texto para poder incrustarlo dentro del HTML del correo.
+ *
+ * Por que hace falta: el nombre de la persona invitada lo teclea un
+ * administrador en un formulario. Si llega con `<`, `>` o comillas, al
+ * interpolarlo crudo dentro de la plantilla rompe el marcado del correo (y en
+ * el peor caso inyecta etiquetas en el cliente de correo de quien lo recibe).
+ * Se aplica tambien al nombre de la app, al correo de soporte y al enlace,
+ * porque los tres acaban dentro de atributos HTML.
+ */
+function escapeHtml(valor: string): string {
+  return valor
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 
 //Reset Password Email Template (HTML and Text)
 export function resetPasswordTemplate({
@@ -514,4 +533,166 @@ Entra aquí para comenzar:
 ${appUrl}
 
 Si necesitas ayuda, contáctanos.`;
+}
+
+
+
+// Invitation Email Template (HTML and Text)
+// Se envia cuando un administrador da de alta a una persona: la cuenta ya
+// existe, lo unico que falta es que elija su contrasena con el boton.
+export function invitationEmailTemplate({
+  userName = "Cliente",
+  appName = "Automation WS",
+  link,
+  logoUrl,
+  supportEmail = "soporte@tu-dominio.com",
+}: {
+  userName?: string;
+  appName?: string;
+  link: string;
+  logoUrl?: string;
+  supportEmail?: string;
+}) {
+  // Colores de tu marca
+  const primary = "#16a34a";   // green-600
+  const secondary = "#10b981"; // emerald-500
+  const text = "#111827";      // gray-900
+  const muted = "#6b7280";     // gray-500
+  const bg = "#f8fafc";        // slate-50
+  const card = "#ffffff";
+
+  // Todo lo que viene de fuera se escapa antes de entrar en el HTML.
+  const nombreSeguro = escapeHtml(userName);
+  const appSegura = escapeHtml(appName);
+  const soporteSeguro = escapeHtml(supportEmail);
+  const enlaceSeguro = escapeHtml(link);
+
+  const preheader = `Te han creado una cuenta en ${appSegura}`;
+  const safeLogo = escapeHtml(logoUrl || `${process.env.NEXT_PUBLIC_APP_URL_LOGO}`);
+
+  return `<!doctype html>
+<html lang="es">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="color-scheme" content="light only" />
+    <meta name="x-apple-disable-message-reformatting" />
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no" />
+    <title>${appSegura} – Invitación</title>
+    <style>
+      a { text-decoration: none; }
+      @media (max-width: 600px) {
+        .container { width: 100% !important; }
+        .px { padding-left: 20px !important; padding-right: 20px !important; }
+        .btn { width: 100% !important; }
+      }
+    </style>
+  </head>
+  <body style="margin:0; padding:0; background:${bg};">
+    <!-- Preheader (oculto) -->
+    <div style="display:none; max-height:0; overflow:hidden; opacity:0; color:transparent; visibility:hidden;">
+      ${preheader} — Pulsa el botón para elegir tu contraseña y entrar.
+    </div>
+
+    <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="background:${bg};">
+      <tr>
+        <td align="center" style="padding: 32px 16px;">
+          <table role="presentation" cellpadding="0" cellspacing="0" width="600" class="container" style="width:600px; max-width:100%;">
+            <!-- Card -->
+            <tr>
+              <td style="background:${card}; border-radius:16px; box-shadow:0 20px 60px rgba(0,0,0,.12); overflow:hidden;">
+                <!-- Top bar gradient -->
+                <div style="height:6px; background: linear-gradient(90deg, ${primary}, ${secondary});"></div>
+
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td align="center" class="px" style="padding: 32px 40px;">
+                      <!-- Logo -->
+                      <div style="display:inline-block; background:#fff; border-radius:16px; padding:16px; box-shadow:0 10px 25px rgba(0,0,0,.08);">
+                        <img src="${safeLogo}" alt="${appSegura} Logo" width="114" height="114" style="display:block; border:0; outline:none; text-decoration:none;" />
+                      </div>
+
+                      <!-- Heading -->
+                      <h1 style="margin:24px 0 8px; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:24px; line-height:1.3; color:${text};">
+                        Te han invitado a ${appSegura}
+                      </h1>
+                      <div style="height:6px; width:96px; margin:8px auto 0; border-radius:9999px; background: linear-gradient(90deg, ${primary}, ${secondary});"></div>
+
+                      <!-- Copy -->
+                      <p style="margin:24px 0 0; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:14px; line-height:1.7; color:${muted};">
+                        Hola <strong style="color:${text};">${nombreSeguro}</strong>, te hemos creado una cuenta en <strong style="color:${text};">${appSegura}</strong>.
+                      </p>
+                      <p style="margin:12px 0 0; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:14px; line-height:1.7; color:${muted};">
+                        Pulsa el botón para elegir tu contraseña y entrar en la plataforma. Por seguridad, este enlace puede expirar y solo se puede usar una vez.
+                      </p>
+
+                      <!-- Button (bulletproof) -->
+                      <table role="presentation" cellpadding="0" cellspacing="0" style="margin:28px auto 0;">
+                        <tr>
+                          <td align="center" bgcolor="${primary}" style="border-radius:12px;">
+                            <!--[if mso]>
+                            <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" arcsize="20%" href="${enlaceSeguro}" style="height:48px;v-text-anchor:middle;width:300px;" stroke="f" fillcolor="${primary}">
+                              <w:anchorlock/>
+                              <center style="color:#ffffff;font-family:Segoe UI,Roboto,Arial,sans-serif;font-size:16px;font-weight:bold;">
+                                Elegir mi contraseña →
+                              </center>
+                            </v:roundrect>
+                            <![endif]-->
+                            <![if !mso]>
+                              <a class="btn" href="${enlaceSeguro}" target="_blank"
+                                style="display:inline-block; padding:14px 22px; min-width:260px; text-align:center; border-radius:12px; background: linear-gradient(90deg, ${primary}, ${secondary}); color:#fff; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:16px; font-weight:700;">
+                                Elegir mi contraseña →
+                              </a>
+                            <![endif]>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <!-- Fallback URL -->
+                      <p style="margin:24px 0 0; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:12px; line-height:1.7; color:${muted};">
+                        Si el botón no funciona, copia y pega este enlace en tu navegador:
+                      </p>
+                      <p style="margin:8px 0 0; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:12px; word-break:break-all;">
+                        <a href="${enlaceSeguro}" style="color:${primary}; text-decoration:underline;">${enlaceSeguro}</a>
+                      </p>
+
+                      <!-- Divider -->
+                      <div style="height:1px; background:#e5e7eb; margin:28px 0;"></div>
+
+                      <!-- Help / Footer -->
+                      <p style="margin:0; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:12px; color:${muted};">
+                        ¿No esperabas esta invitación? Puedes ignorar este correo. Si tienes dudas, escríbenos a
+                        <a href="mailto:${soporteSeguro}" style="color:${primary}; text-decoration:underline;">${soporteSeguro}</a>.
+                      </p>
+
+                      <p style="margin:16px 0 0; font-family:Segoe UI,Roboto,Arial,sans-serif; font-size:12px; color:${muted};">
+                        © ${new Date().getFullYear()} ${appSegura}. Todos los derechos reservados.
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+
+              </td>
+            </tr>
+          </table>
+
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export function invitationEmailText({
+  link,
+  appName = "Automation WS",
+  userName = "Cliente",
+}: { link: string; appName?: string; userName?: string }) {
+  return `Te han invitado a ${appName}
+
+Hola ${userName}, te hemos creado una cuenta en ${appName}.
+Abre el siguiente enlace para elegir tu contraseña y entrar (puede expirar y solo se puede usar una vez):
+
+${link}
+
+Si no esperabas esta invitación, ignora este mensaje.`;
 }
