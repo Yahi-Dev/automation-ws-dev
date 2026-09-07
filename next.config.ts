@@ -16,7 +16,12 @@ const nextConfig: NextConfig = {
   // Empaquetado autocontenido: `next build` deja en .next/standalone un
   // server.js con solo las dependencias que se usan de verdad. Es lo que
   // permite una imagen de Docker pequena sin copiar node_modules entero.
-  output: "standalone",
+  //
+  // PERO en Vercel hay que desactivarlo: Vercel usa su propio Build Output API
+  // y el trazado de standalone choca con el suyo, con lo que el build falla con
+  // `ENOENT: .next/next-server.js.nft.json`. Vercel define VERCEL=1 en el build,
+  // asi que el mismo repo sirve para los dos destinos sin tocar nada.
+  ...(process.env.VERCEL ? {} : { output: "standalone" as const }),
 
   // Paquetes solo de servidor (Node): que el bundler no intente empaquetarlos.
   // exceljs (lector de .xlsx al importar contactos) es CommonJS y hace
