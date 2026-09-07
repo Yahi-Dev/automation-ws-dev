@@ -10,8 +10,16 @@ import { twilioBreaker } from "@/src/lib/whatsapp";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-/** Timeout de cada comprobación: una sonda que se cuelga es peor que una que falla. */
-const TIMEOUT_MS = 2_000;
+/**
+ * Timeout de cada comprobación.
+ *
+ * Una sonda que se cuelga es peor que una que falla, pero una que corta
+ * demasiado pronto es peor todavía: reporta caídas falsas. Las bases de datos
+ * sin servidor (TiDB Serverless, Neon...) suspenden tras un rato de inactividad
+ * y la PRIMERA conexión tarda varios segundos; con 2 s el health check decía
+ * "down" cada vez que nadie había entrado en un rato.
+ */
+const TIMEOUT_MS = Math.max(1_000, Number(process.env.HEALTH_TIMEOUT_MS ?? 8_000));
 
 function conPlazo<T>(promesa: Promise<T>, ms: number): Promise<T | "timeout"> {
   return Promise.race([
