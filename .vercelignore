@@ -1,0 +1,35 @@
+# Lo que NO necesita viajar al build de Vercel.
+# Reduce el contexto de subida y el tiempo de compilacion.
+
+# Artefactos y dependencias: Vercel los reconstruye
+node_modules
+.next
+out
+dist
+*.tsbuildinfo
+
+# Secretos: las variables se configuran en el panel de Vercel
+.env
+.env.*
+!.env.example
+env.url
+
+# Despliegue en servidor propio: no aplica en Vercel
+Dockerfile
+Dockerfile.worker
+docker-compose.yml
+Caddyfile
+
+# Pruebas y documentacion: no se ejecutan ni se sirven en produccion
+tests
+coverage
+docs
+.github
+
+# Herramientas locales de desarrollo
+.agents
+.skills
+skills-lock.json
+.claude
+.vscode
+.idea
