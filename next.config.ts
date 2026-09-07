@@ -26,6 +26,12 @@ const nextConfig: NextConfig = {
   images: {
     remotePatterns: [
       ...s3RemotePattern(),
+      // Cloudinary: donde viven las imagenes de las campanas en produccion.
+      {
+        protocol: "https",
+        hostname: "res.cloudinary.com",
+        pathname: "/**",
+      },
       {
         protocol: "https",
         hostname: "avatars.githubusercontent.com",

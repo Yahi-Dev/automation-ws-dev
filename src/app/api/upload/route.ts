@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import path from 'path';
 import fs from 'fs';
 import { storageEnabled, putObject } from '@/src/lib/storage';
+import { cloudinaryEnabled, subirImagen } from '@/src/lib/cloudinary';
 import { requireAuth } from '@/src/lib/authz';
 import { enforceApiLimit } from '@/src/lib/api-rate-limit';
 
@@ -87,14 +88,23 @@ export async function POST(req: NextRequest) {
     const ext = TYPE_TO_EXT[detected];
     const uniqueName = `${uuidv4()}${ext}`;
 
-    // Object storage (S3/R2) si está configurado: funciona multi-instancia.
+    // 1) Cloudinary, si esta configurado. Es la via en produccion: en Vercel el
+    //    sistema de archivos es de SOLO LECTURA y escribir en public/uploads
+    //    lanza EROFS, con lo que la persona veria un 500 al subir una imagen.
+    if (cloudinaryEnabled) {
+      const imageUrl = await subirImagen(uniqueName, buffer, folder);
+      return NextResponse.json({ imageUrl }, { status: 200 });
+    }
+
+    // 2) Object storage (S3/R2) si está configurado: funciona multi-instancia.
     if (storageEnabled) {
       const key = `uploads/${folder}/${uniqueName}`;
       const imageUrl = await putObject(key, buffer, detected);
       return NextResponse.json({ imageUrl }, { status: 200 });
     }
 
-    // Fallback: disco local (mono-instancia / dev).
+    // 3) Fallback: disco local. SOLO sirve en desarrollo; en un despliegue
+    //    serverless esta rama falla y es intencional que falle de forma ruidosa.
     const uploadPath = path.join(process.cwd(), 'public', 'uploads', folder);
     if (!fs.existsSync(uploadPath)) {
       fs.mkdirSync(uploadPath, { recursive: true });

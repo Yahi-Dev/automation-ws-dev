@@ -91,6 +91,7 @@ Tres que suelen olvidarse y rompen cosas en silencio:
 | `SETTINGS_ENC_KEY` | La clave de cifrado se deriva de `BETTER_AUTH_SECRET`; rotar ese secreto vuelve **ilegibles** los secretos ya guardados. Defínela **antes** de guardar credenciales. |
 | `TRUST_PLATFORM_HEADERS` / `TRUSTED_PROXY_HOPS` | La app no puede resolver la IP del cliente y **bloquea los intentos de login** (fallo cerrado, deliberado). |
 | `REDIS_URL` | No hay cola ni worker: las campañas programadas no se despachan. |
+| `CLOUDINARY_*` | Las imágenes se intentan guardar en disco. En Vercel (o cualquier despliegue serverless) eso falla con `EROFS`. |
 
 ## Scripts
 
