@@ -50,3 +50,44 @@ export interface InboundFilters {
   handledAs?: string;
   contactId?: number;
 }
+
+/* ------------------------------------------------------------------ *
+ * Conversación: el hilo con UNA persona y la ventana de 24 h.
+ *
+ * Las fechas llegan como texto (JSON no tiene fechas) y se convierten donde
+ * se pintan. La ventana NO se recalcula en el navegador: la calcula el
+ * servidor y aquí solo se muestra, porque un teléfono con la hora mal puesta
+ * diría que se puede responder cuando ya no se puede.
+ * ------------------------------------------------------------------ */
+
+/** Un mensaje del hilo, venga de quien venga. */
+export interface MensajeConversacion {
+  id: number;
+  /** "entrante" = lo escribió la persona; "saliente" = lo escribió la app. */
+  direccion: "entrante" | "saliente";
+  texto: string;
+  /** ISO 8601. */
+  fecha: string;
+  /** Solo en los salientes: queued | sent | delivered | read | failed | undelivered. */
+  estado?: string;
+  errorMensaje?: string | null;
+  enviadoPor?: string;
+}
+
+/** Estado de la ventana de 24 h, tal y como lo calculó el servidor. */
+export interface EstadoVentanaDTO {
+  abierta: boolean;
+  ultimoEntranteAt: string | null;
+  restanteMs: number;
+  expiraAt: string | null;
+}
+
+export interface ConversacionDTO {
+  telefono: string;
+  contacto: { id: number; name: string; phone: string; consentState: string } | null;
+  ventana: EstadoVentanaDTO;
+  mensajes: MensajeConversacion[];
+  /** "quedan 3 horas y 20 minutos", ya en palabras. */
+  ventanaEnPalabras: string;
+  maxCaracteres: number;
+}

@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { DataTable } from "@/src/components/data-table"
 import { Button } from "@/src/components/ui/button"
-import { Link2, Loader2, MoreHorizontal } from "lucide-react"
+import { Link2, Loader2, MessageSquare, MoreHorizontal } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,7 +27,14 @@ import { Skeleton } from "@/src/components/ui/skeleton"
 import { Badge } from "@/src/components/ui/badge"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { useContactsForLinking, useGetAllInbound, useLinkInbound } from "../hooks/use-inbound"
+import {
+  useContactsForLinking,
+  useConversacion,
+  useGetAllInbound,
+  useLinkInbound,
+} from "../hooks/use-inbound"
+import DialogoConversacion from "./dialogo-conversacion"
+import { VENTANA_MS } from "@/src/lib/ventana-24h"
 
 // Declarado fuera del componente: no se recrea en cada render.
 const TableSkeleton = ({ cols, rows = 8 }: { cols: number; rows?: number }) => (
@@ -78,11 +85,21 @@ export default function InboundTable() {
   const { fetchAll, inbound, isLoading } = useGetAllInbound()
   const { link, isLoading: isLinking } = useLinkInbound()
   const { contacts, loadContacts, isLoading: isLoadingContacts } = useContactsForLinking()
+  const {
+    conversacion,
+    cargar: cargarConversacion,
+    responder,
+    limpiar: limpiarConversacion,
+    isLoading: isLoadingConversacion,
+    isSending,
+  } = useConversacion()
 
   const [handledAs, setHandledAs] = useState<string>("")
   const [linkOpen, setLinkOpen] = useState(false)
   const [current, setCurrent] = useState<InboundMessageRow | null>(null)
   const [selectedContactId, setSelectedContactId] = useState<number | null>(null)
+  const [chatOpen, setChatOpen] = useState(false)
+  const [chatMessageId, setChatMessageId] = useState<number | null>(null)
 
   useEffect(() => {
     fetchAll(handledAs ? { handledAs } : undefined)
@@ -112,6 +129,55 @@ export default function InboundTable() {
       default:
         return <Badge variant="outline" data-tour="entrantes-accion">{getHandledText(value)}</Badge>
     }
+  }
+
+  /**
+   * Ultima vez que escribio CADA numero, entre todo lo cargado.
+   *
+   * Sirve para adelantar en la tabla si todavia se puede contestar por escrito
+   * o no, sin abrir el dialogo. Se calcula por telefono y no por fila porque la
+   * ventana de 24 h la abre el ULTIMO mensaje de esa persona, no el de la fila
+   * que se este mirando: una respuesta de hace tres dias sigue siendo
+   * contestable si esa misma persona volvio a escribir hace una hora.
+   *
+   * Es solo una pista de interfaz. Quien decide de verdad es el servidor, con
+   * su reloj, en el momento de enviar: un telefono con la hora mal puesta no
+   * puede hacer que se envie algo que WhatsApp va a rechazar.
+   */
+  const ultimoPorTelefono = useMemo(() => {
+    const mapa = new Map<string, number>()
+    for (const m of inbound) {
+      const cuando = new Date(m.receivedAt).getTime()
+      if (isNaN(cuando)) continue
+      const previo = mapa.get(m.fromPhone)
+      if (previo === undefined || cuando > previo) mapa.set(m.fromPhone, cuando)
+    }
+    return mapa
+  }, [inbound])
+
+  const ventanaAbierta = (telefono: string): boolean => {
+    const ultimo = ultimoPorTelefono.get(telefono)
+    if (ultimo === undefined) return false
+    return Date.now() - ultimo < VENTANA_MS
+  }
+
+  const handleResponderClick = async (message: InboundMessageRow) => {
+    // Se abre el dialogo ANTES de tener los datos: asi la pantalla reacciona al
+    // instante y ensena su propio esqueleto de carga, en vez de dejar un par de
+    // segundos en los que parece que el boton no hizo nada.
+    limpiarConversacion()
+    setChatMessageId(message.id)
+    setChatOpen(true)
+    await cargarConversacion(message.id)
+  }
+
+  const handleEnviarRespuesta = async (texto: string) => {
+    if (chatMessageId === null) return null
+    const resultado = await responder(chatMessageId, texto)
+    // La lista de detras tambien cambia: la respuesta enviada no aparece en
+    // ella, pero si puede haber llegado algun entrante nuevo mientras tanto.
+    if (resultado) await fetchAll(handledAs ? { handledAs } : undefined)
+    return resultado
   }
 
   const handleLinkClick = (message: InboundMessageRow) => {
@@ -214,38 +280,65 @@ export default function InboundTable() {
       enableHiding: false,
       cell: ({ row }) => {
         const message = row.original
-        // Solo los huérfanos (sin contacto) se pueden vincular.
-        if (message.contactId !== null) {
-          return <span className="text-sm text-muted-foreground">—</span>
-        }
+        const abierta = ventanaAbierta(message.fromPhone)
+
         return (
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" className="h-8 w-8 p-0" data-tour="entrantes-vincular">
-                <span className="sr-only">Abrir menú</span>
-                <MoreHorizontal className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuLabel className="ml-5">Acciones</DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => handleLinkClick(message)}>
-                <Link2 className="mr-2 h-4 w-4" />
-                Vincular a contacto
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <div className="flex items-center gap-1">
+            {/* El botón principal va SUELTO, no escondido dentro del menú de
+                tres puntos: contestar es lo que más se va a hacer en esta
+                pantalla, y una acción que hay que descubrir es una acción que
+                no se usa.
+
+                Cambia de palabra según se pueda contestar o no. Poner siempre
+                "Responder" y avisar después de que ya no se puede sería
+                prometer algo que no se va a cumplir. */}
+            <Button
+              size="sm"
+              variant={abierta ? "default" : "outline"}
+              onClick={() => handleResponderClick(message)}
+              data-tour="entrantes-responder"
+              title={
+                abierta
+                  ? "Escribirle a esta persona por WhatsApp"
+                  : "Ver la conversación (el plazo de 24 horas para contestar ya pasó)"
+              }
+            >
+              <MessageSquare className="mr-1.5 h-4 w-4" aria-hidden="true" />
+              {abierta ? "Responder" : "Ver"}
+            </Button>
+
+            {/* Solo los huérfanos (sin contacto) se pueden vincular. */}
+            {message.contactId === null && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="h-8 w-8 p-0" data-tour="entrantes-vincular">
+                    <span className="sr-only">Más acciones</span>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuLabel className="ml-5">Acciones</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => handleLinkClick(message)}>
+                    <Link2 className="mr-2 h-4 w-4" />
+                    Vincular a contacto
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         )
       },
     },
   ]
 
   return (
-    <div className="container mx-auto py-5 px-5">
+    <div className="container mx-auto px-5 py-5 pb-28">
       <div className="mb-6" data-tour="entrantes-encabezado">
-        <h1 className="text-3xl font-bold">Mensajes Entrantes</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Mensajes Entrantes</h1>
         <p className="text-muted-foreground">
-          Respuestas que llegan por WhatsApp y qué hizo el sistema con cada una
+          Todo lo que te contestan por WhatsApp llega aquí. Es el único sitio donde puedes
+          leerlo y contestarle a la persona: el número de la app no se abre desde el móvil.
         </p>
       </div>
 
@@ -280,6 +373,21 @@ export default function InboundTable() {
           showDateRangeFilter={true}
         />
       )}
+
+      <DialogoConversacion
+        open={chatOpen}
+        onOpenChange={(abierto) => {
+          setChatOpen(abierto)
+          if (!abierto) {
+            setChatMessageId(null)
+            limpiarConversacion()
+          }
+        }}
+        conversacion={conversacion}
+        isLoading={isLoadingConversacion}
+        isSending={isSending}
+        onEnviar={handleEnviarRespuesta}
+      />
 
       <Dialog open={linkOpen} onOpenChange={setLinkOpen}>
         <DialogContent>

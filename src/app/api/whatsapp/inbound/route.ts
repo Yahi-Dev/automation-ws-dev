@@ -56,7 +56,7 @@ async function persistirEntrante(datos: {
   handledAs: TratamientoEntrante;
   keyword: string | null;
   contactId: number | null;
-}): Promise<void> {
+}): Promise<number | null> {
   try {
     const telefono = recorta(datos.fromPhone, MAX_TELEFONO);
     const texto = recorta(datos.body, MAX_TEXTO);
@@ -76,7 +76,7 @@ async function persistirEntrante(datos: {
           .digest("hex")
           .slice(0, 40)}`;
 
-    await prisma.inboundMessages.create({
+    const fila = await prisma.inboundMessages.create({
       data: {
         fromPhone: telefono,
         body: texto,
@@ -85,12 +85,54 @@ async function persistirEntrante(datos: {
         keyword: datos.keyword,
         contactId: datos.contactId,
       },
+      select: { id: true },
     });
+    return fila.id;
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
-      return; // duplicado por providerSid: reenvio de Twilio, ya esta registrado
+      return null; // duplicado por providerSid: reenvio de Twilio, ya esta registrado
     }
     throw error; // cualquier otro fallo sube y responde 5xx para que Twilio reintente
+  }
+}
+
+/**
+ * Deja constancia de la respuesta AUTOMATICA que manda la app.
+ *
+ * Cuando alguien escribe BAJA o ALTA, la app le contesta al momento por TwiML.
+ * Esa contestacion no pasaba por ningun sitio nuestro, asi que en la pantalla
+ * de conversacion se veia el "BAJA" de la persona y nada mas: parecia que se
+ * habia quedado sin respuesta, y quien lo mirase podia contestar otra vez lo
+ * mismo.
+ *
+ * `providerSid` queda a null: la manda Twilio a partir del TwiML y no nos
+ * devuelve identificador. Por eso tampoco habra confirmacion de entrega, y el
+ * estado se guarda directamente como "sent". Es honesto: sabemos que salio, no
+ * si llego.
+ *
+ * Es informativo: si falla, no se toca la respuesta al remitente.
+ */
+async function registrarRespuestaAutomatica(datos: {
+  toPhone: string;
+  body: string;
+  contactId: number | null;
+  inboundId: number | null;
+}): Promise<void> {
+  try {
+    await prisma.outboundReplies.create({
+      data: {
+        toPhone: recorta(datos.toPhone, MAX_TELEFONO),
+        body: recorta(datos.body, MAX_TEXTO),
+        status: "sent",
+        contactId: datos.contactId,
+        inboundId: datos.inboundId,
+        sentBy: "respuesta-automatica",
+      },
+    });
+  } catch (error) {
+    console.error("No se pudo registrar la respuesta automatica", {
+      error: error instanceof Error ? error.message : "Error desconocido",
+    });
   }
 }
 
@@ -154,7 +196,7 @@ export async function POST(req: NextRequest) {
 
     // Se guarda ANTES de decidir nada: aunque despues no haya accion que tomar,
     // el mensaje ya no se pierde.
-    await persistirEntrante({
+    const entranteId = await persistirEntrante({
       fromPhone: normalizeInboundPhone(from),
       body,
       providerSid: sid || null,
@@ -185,6 +227,14 @@ export async function POST(req: NextRequest) {
       type === "opt_out"
         ? "Has sido dado de baja y no recibirás más mensajes. Responde ALTA para volver a suscribirte."
         : "¡Suscripción confirmada! Volverás a recibir nuestros mensajes.";
+
+    await registrarRespuestaAutomatica({
+      toPhone: normalizeInboundPhone(from),
+      body: reply,
+      contactId: contact.id,
+      inboundId: entranteId,
+    });
+
     return twiml(reply);
   } catch (error) {
     console.error("Inbound webhook error:", error);

@@ -15,6 +15,7 @@ import { HttpResponse } from "@/src/utils/httpResponse";
 
 export type ApiLimitName =
   | "whatsapp-send"
+  | "whatsapp-reply"
   | "contacts-import"
   | "upload"
   | "settings-test"
@@ -31,6 +32,10 @@ const HORA = 60 * MINUTO;
 const LIMITES: Record<ApiLimitName, Limite> = {
   // Enviar una campana. Es la ruta que gasta dinero.
   "whatsapp-send": { maxAttempts: 5, windowMs: 5 * MINUTO, blockDurationMs: 15 * MINUTO },
+  // Responder a un mensaje entrante. Tambien cuesta dinero, pero aqui hay una
+  // persona escribiendo a mano: el limite tiene que dar de sobra para una
+  // conversacion viva y cortar solo el bucle automatico.
+  "whatsapp-reply": { maxAttempts: 40, windowMs: 10 * MINUTO, blockDurationMs: 10 * MINUTO },
   // Importar CSV: cada peticion puede parsear 50.000 filas en memoria.
   "contacts-import": { maxAttempts: 5, windowMs: 10 * MINUTO, blockDurationMs: 30 * MINUTO },
   // Subida de archivos: 5 MB por peticion, sin cuota de disco.

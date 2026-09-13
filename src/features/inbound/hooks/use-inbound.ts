@@ -1,11 +1,18 @@
 // src/features/inbound/hooks/use-inbound.ts
 import { useCallback, useState } from "react";
 import { toast } from "sonner";
-import { InboundFilters, InboundMessageRow, InboundMessageType } from "../types";
+import {
+  ConversacionDTO,
+  InboundFilters,
+  InboundMessageRow,
+  InboundMessageType,
+} from "../types";
 import {
   InboundResponse,
   getAllInbound,
+  getConversation,
   linkInboundToContact,
+  sendReply,
 } from "../services/inbound-service";
 import { getAllContacts } from "../../contacts/services/contacts-service";
 import { ContactsType } from "../../contacts/types";
@@ -128,4 +135,61 @@ export function useContactsForLinking() {
   }, []);
 
   return { contacts, loadContacts, isLoading };
+}
+
+/**
+ * El hilo con una persona: cargarlo y responder dentro de él.
+ *
+ * Carga y envío viven en el MISMO hook porque comparten estado: el servidor
+ * devuelve el hilo ya actualizado al responder, así que enviar es también una
+ * recarga. Separarlos obligaría a una segunda petición y a un parpadeo en el
+ * que el mensaje recién enviado todavía no aparece.
+ */
+export function useConversacion() {
+  const [conversacion, setConversacion] = useState<ConversacionDTO | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+
+  const cargar = useCallback(async (id: number): Promise<ConversacionDTO | null> => {
+    setIsLoading(true);
+    try {
+      const datos = await getConversation(id);
+      setConversacion(datos);
+      return datos;
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : "Error desconocido";
+      toast.error("No se pudo abrir la conversación", { description: mensaje });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  const responder = useCallback(
+    async (id: number, texto: string): Promise<ConversacionDTO | null> => {
+      setIsSending(true);
+      try {
+        const datos = await sendReply(id, texto);
+        setConversacion(datos);
+        toast.success("Respuesta enviada", {
+          description: "La persona la recibirá en su WhatsApp en unos segundos.",
+        });
+        return datos;
+      } catch (err) {
+        const mensaje = err instanceof Error ? err.message : "Error desconocido";
+        // `duration` largo a propósito: los motivos por los que se rechaza una
+        // respuesta (ventana cerrada, persona dada de baja) son explicaciones
+        // de varias líneas, y un aviso de 4 segundos no da tiempo a leerlas.
+        toast.error("No se envió la respuesta", { description: mensaje, duration: 12000 });
+        return null;
+      } finally {
+        setIsSending(false);
+      }
+    },
+    []
+  );
+
+  const limpiar = useCallback(() => setConversacion(null), []);
+
+  return { conversacion, cargar, responder, limpiar, isLoading, isSending };
 }

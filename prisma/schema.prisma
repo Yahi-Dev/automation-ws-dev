@@ -124,6 +124,7 @@ model contacts {
   messages        message[]
   consentEvents   consentEvents[]
   inboundMessages inboundMessages[]
+  outboundReplies outboundReplies[]
 
   @@index([consentState])
   @@index([createdAt])
@@ -197,6 +198,8 @@ model inboundMessages {
   contactId   Int?
   contact     contacts? @relation(fields: [contactId], references: [id], onDelete: SetNull)
   receivedAt  DateTime @default(now())
+  /// Respuestas que se enviaron desde la app a raiz de este mensaje.
+  respuestas  outboundReplies[]
 
   @@index([receivedAt])
   @@index([fromPhone])
@@ -339,4 +342,50 @@ model TwilioContentTemplate {
   @@map("twilio_content_templates")
   @@index([accountSid])
   @@index([friendlyName])
+}
+
+/// Respuestas que SALEN de la app hacia una persona concreta, fuera de toda
+/// campana.
+///
+/// Por que una tabla propia y no `message`: `message` exige `postId` (una
+/// campana) y `contactId`, y una respuesta puede ir a un numero que ni siquiera
+/// esta en la agenda. Forzarla ahi obligaria a inventar campanas fantasma y
+/// romperia el unique (postId, contactId), que es lo que hoy garantiza que
+/// nadie reciba dos veces el mismo envio masivo.
+///
+/// Estas respuestas solo se pueden mandar dentro de la ventana de 24 h que abre
+/// el ultimo mensaje de esa persona (regla de WhatsApp, ver src/lib/ventana.ts).
+model outboundReplies {
+  id      Int    @id @default(autoincrement())
+  /// Destino en E.164 (sin el prefijo "whatsapp:").
+  toPhone String @db.VarChar(32)
+  body    String @db.Text
+
+  /// SID del mensaje en el proveedor. Unico: es por donde el statusCallback
+  /// encuentra esta fila para avanzar el estado.
+  providerSid String? @unique @db.VarChar(128)
+  /// queued | sent | delivered | read | failed | undelivered
+  status       String  @default("queued") @db.VarChar(16)
+  errorCode    String? @db.VarChar(32)
+  errorMessage String? @db.Text
+
+  /// Contacto de la agenda, si el numero estaba registrado.
+  contactId Int?
+  contact   contacts? @relation(fields: [contactId], references: [id], onDelete: SetNull)
+  /// Mensaje entrante al que responde, para poder reconstruir la conversacion.
+  inboundId Int?
+  inbound   inboundMessages? @relation(fields: [inboundId], references: [id], onDelete: SetNull)
+
+  /// Correo de quien pulso "Responder". Queda como prueba de quien contesto.
+  sentBy      String    @db.VarChar(191)
+  sentAt      DateTime  @default(now())
+  deliveredAt DateTime?
+  readAt      DateTime?
+  updatedAt   DateTime? @default(now()) @updatedAt
+
+  @@index([toPhone, sentAt])
+  @@index([contactId])
+  @@index([inboundId])
+  @@index([sentAt])
+  @@map("outbound_replies")
 }

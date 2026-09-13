@@ -1,5 +1,5 @@
 // src/features/inbound/services/inbound-service.ts
-import { InboundFilters, InboundMessageType } from "../types";
+import { ConversacionDTO, InboundFilters, InboundMessageType } from "../types";
 import { fetchAllPages } from "@/src/lib/fetch-all-pages";
 
 export interface InboundResponse {
@@ -62,4 +62,40 @@ export async function linkInboundToContact(
     console.error("Error al vincular mensaje entrante:", error);
     throw error;
   }
+}
+
+/**
+ * Trae el hilo completo con el número que escribió el mensaje `id`.
+ * Llama a GET /api/inbound/<id>/conversation.
+ */
+export async function getConversation(id: number): Promise<ConversacionDTO> {
+  const response = await fetch(`/api/inbound/${id}/conversation`);
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "Error al cargar la conversación");
+  }
+  return result.data as ConversacionDTO;
+}
+
+/**
+ * Envía una respuesta de texto libre. Llama a POST /api/inbound/<id>/reply.
+ *
+ * Devuelve el hilo YA actualizado: el servidor lo manda de vuelta en la misma
+ * respuesta para no tener que volver a preguntarlo (y para que el mensaje
+ * recién enviado aparezca con su estado real, no con uno inventado aquí).
+ */
+export async function sendReply(id: number, texto: string): Promise<ConversacionDTO> {
+  const response = await fetch(`/api/inbound/${id}/reply`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ texto }),
+  });
+
+  const result = await response.json();
+
+  if (!response.ok || !result.success) {
+    throw new Error(result.message || "No se pudo enviar la respuesta");
+  }
+  return result.data as ConversacionDTO;
 }

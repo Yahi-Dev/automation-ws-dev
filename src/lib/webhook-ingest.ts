@@ -35,7 +35,12 @@ export async function applyWebhookStatus(evt: WebhookStatusEvent): Promise<Apply
     where: { providerSid: messageSid },
     select: { id: true, status: true },
   });
-  if (!message) return "unknown";
+
+  // No es un mensaje de campana: puede ser una RESPUESTA suelta enviada desde
+  // la pantalla de entrantes. Sin esto, esas respuestas se quedaban para
+  // siempre en "enviando" y quien contestaba no llegaba a saber nunca si el
+  // mensaje habia llegado de verdad.
+  if (!message) return aplicarEstadoARespuesta(messageSid, status, errorCode);
 
   // No retroceder de estado (ej. un "delivered" que llega tras un "read"),
   // pero permitir siempre marcar fallos.
@@ -70,5 +75,46 @@ export async function applyWebhookStatus(evt: WebhookStatusEvent): Promise<Apply
   // cinco minutos despues de que Twilio confirmara la entrega.
   await redis.del(`message-${message.id}`).catch(() => {});
   await bumpCacheVersion("dashboard").catch(() => {}); // refresca métricas cacheadas
+  return "updated";
+}
+
+/**
+ * Mismo avance de estado, pero sobre `outbound_replies`.
+ *
+ * Se separa en su propia funcion en vez de generalizar la de arriba porque las
+ * dos tablas no comparten columnas: `message` lleva `updatedBy` y pertenece a
+ * una campana; una respuesta lleva `sentBy` y no pertenece a ninguna. Unirlas
+ * con condicionales dejaria una funcion que no se entiende de un vistazo.
+ */
+async function aplicarEstadoARespuesta(
+  messageSid: string,
+  status: string,
+  errorCode: string | null
+): Promise<ApplyResult> {
+  const respuesta = await prisma.outboundReplies.findFirst({
+    where: { providerSid: messageSid },
+    select: { id: true, status: true },
+  });
+  if (!respuesta) return "unknown";
+
+  const esFallo = status === "failed" || status === "undelivered";
+  if (!esFallo && statusRank(status) >= 0 && statusRank(status) < statusRank(respuesta.status)) {
+    return "skipped";
+  }
+
+  const data: {
+    status: string;
+    deliveredAt?: Date;
+    readAt?: Date;
+    errorCode?: string;
+  } = { status };
+  if (status === "delivered") data.deliveredAt = new Date();
+  if (status === "read") {
+    data.readAt = new Date();
+    data.deliveredAt = new Date(); // un "read" sin "delivered" previo lo implica
+  }
+  if (errorCode) data.errorCode = errorCode;
+
+  await prisma.outboundReplies.update({ where: { id: respuesta.id }, data });
   return "updated";
 }
