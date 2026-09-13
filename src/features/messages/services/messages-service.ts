@@ -149,6 +149,10 @@ export interface SendCampaignSummary {
   total: number;
   sent: number;
   failed: number;
+  /** Mensajes que siguen en espera tras esta ejecución (tope por pasada o cupo de 24 h). */
+  pendientesRestantes?: number;
+  /** Cómo quedó el cupo de 24 h de WhatsApp. */
+  cuota?: { cuota: number; usados: number; disponibles: number };
   results: Array<{ messageId: number; contactId: number; ok: boolean; sid?: string; error?: string }>;
 }
 

@@ -5,6 +5,7 @@ import { requireAuth, isAdmin } from "@/src/lib/authz";
 import { enforceApiLimit } from "@/src/lib/api-rate-limit";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { sendPostMessages } from "@/src/lib/campaign-send";
+import { avisoCuotaParcial } from "@/src/lib/cuota-diaria";
 import { queueEnabled, enqueueCampaign } from "@/src/lib/queue";
 import prisma from "@/src/lib/prisma";
 
@@ -79,13 +80,25 @@ export async function POST(req: NextRequest) {
 
     if (!outcome.ok) {
       if (outcome.reason === "not_found") return HttpResponse.sendNotFound(outcome.message);
+
+      // El tope de 24 h de WhatsApp NO es un error: la peticion estaba bien y
+      // los mensajes siguen en espera. Devolver 400 lo pintaria de rojo en la
+      // pantalla y quien lo viera creeria que algo se rompio, cuando lo unico
+      // que hay que hacer es esperar.
+      if (outcome.reason === "cuota_diaria") return HttpResponse.sendAccepted(outcome.message);
+
       return HttpResponse.sendBadRequest(outcome.message);
     }
 
-    return HttpResponse.sendSuccess(
-      { Data: outcome, Total: outcome.total },
-      `Envío procesado: ${outcome.sent} enviado(s), ${outcome.failed} fallido(s) de ${outcome.total}`
-    );
+    // Si algo quedo fuera, se explica POR QUE en el mismo mensaje. "quedan 2.750
+    // en espera" sin motivo se lee como un fallo a medias.
+    const resumen = `Envío procesado: ${outcome.sent} enviado(s), ${outcome.failed} fallido(s) de ${outcome.total}`;
+    const detalle =
+      outcome.pendientesRestantes > 0
+        ? `${resumen}. ${avisoCuotaParcial(outcome.sent, outcome.pendientesRestantes, outcome.cuota.cuota)}`
+        : resumen;
+
+    return HttpResponse.sendSuccess({ Data: outcome, Total: outcome.total }, detalle);
   } catch (error) {
     return HttpResponse.sendServerError("Error interno al enviar los mensajes", error);
   }

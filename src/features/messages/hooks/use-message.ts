@@ -339,10 +339,31 @@ export function useSendCampaign() {
 
       if (response.success) {
         const summary = response.data;
+
+        // Sin resumen = no salio nada AHORA: o se encolo, o se agoto el cupo de
+        // 24 h de WhatsApp. Decir "Campaña enviada" en ese caso es mentir, y la
+        // persona se queda esperando una entrega que no va a llegar todavia.
+        if (!summary) {
+          toast.info("Todavía no ha salido", {
+            description: response.message,
+            duration: 12000,
+          });
+          return response;
+        }
+
+        const enEspera = summary.pendientesRestantes ?? 0;
+        if (enEspera > 0) {
+          // Salio a medias, casi siempre por el tope diario de WhatsApp. El
+          // aviso lo redacta el servidor, que es quien sabe el motivo.
+          toast.info(`Se enviaron ${summary.sent}, quedan ${enEspera} en espera`, {
+            description: response.message,
+            duration: 12000,
+          });
+          return response;
+        }
+
         toast.success("Campaña enviada", {
-          description: summary
-            ? `${summary.sent} enviado(s), ${summary.failed} fallido(s) de ${summary.total}.`
-            : response.message,
+          description: `${summary.sent} enviado(s), ${summary.failed} fallido(s) de ${summary.total}.`,
         });
         return response;
       } else {

@@ -12,6 +12,7 @@ import { redis, bumpCacheVersion } from "./redis";
 import { sendWhatsAppMessage, isValidE164, getStatusCallbackUrl, twilioBreaker } from "./whatsapp";
 import { getTwilioConfig } from "./app-config";
 import { captureError } from "./logger";
+import { estadoCuota, avisoCuotaAgotada, type EstadoCuota } from "./cuota-diaria";
 
 const MESSAGES_CACHE_KEY = "messages-cache";
 const STUCK_MS = 90_000; // un "queued" más viejo que esto se considera colgado y es recuperable
@@ -52,7 +53,17 @@ export type SendResult = {
 };
 
 export type SendPostOutcome =
-  | { ok: false; reason: "not_found" | "template_rejected" | "template_not_approved" | "no_pending"; message: string }
+  | {
+      ok: false;
+      reason:
+        | "not_found"
+        | "template_rejected"
+        | "template_not_approved"
+        | "no_pending"
+        /** El tope de 24 h de WhatsApp esta agotado. NO es un fallo. */
+        | "cuota_diaria";
+      message: string;
+    }
   | {
       ok: true;
       postId: number;
@@ -63,6 +74,8 @@ export type SendPostOutcome =
       pendientesRestantes: number;
       /** El breaker de Twilio corto la ejecucion antes de terminar. */
       cortadoPorBreaker: boolean;
+      /** Como quedo el cupo de 24 h despues de esta ejecucion. */
+      cuota: EstadoCuota;
       results: SendResult[];
     };
 
@@ -114,6 +127,26 @@ export async function sendPostMessages(
   //   - `take` acota la ejecución. Antes no había límite: una campaña de
   //     500.000 destinatarios se hidrataba entera en memoria (~300 MB) y
   //     tumbaba el worker por falta de heap antes de terminar.
+  // --- Tope de 24 h de WhatsApp ---
+  //
+  // Va ANTES de seleccionar nada, y por una razon concreta: si se comprobara
+  // dentro del bucle, los mensajes ya estarian reclamados, con su intento
+  // consumido. Al tercer tope se quedarian marcados como fallo definitivo sin
+  // haberlo intentado ni una vez, y nadie volveria a escribirles jamas.
+  //
+  // Aqui, en cambio, los mensajes ni se tocan: siguen pendientes y el reloj los
+  // recoge cuando haya cupo.
+  const cuota = await estadoCuota();
+  if (cuota.disponibles <= 0) {
+    return { ok: false, reason: "cuota_diaria", message: avisoCuotaAgotada(cuota) };
+  }
+
+  // Se pide como mucho lo que cabe en el cupo. Traer 500 para mandar 12 seria
+  // trabajo tirado, y ademas dejaria 488 reclamados sin enviar.
+  const cabenAhora = Number.isFinite(cuota.disponibles)
+    ? Math.min(MAX_POR_EJECUCION, cuota.disponibles)
+    : MAX_POR_EJECUCION;
+
   const stuckCutoff = new Date(Date.now() - STUCK_MS);
   const pending = await prisma.message.findMany({
     where: {
@@ -128,7 +161,7 @@ export async function sendPostMessages(
     },
     include: { contact: { select: { id: true, name: true, phone: true, consentState: true } } },
     orderBy: { id: "asc" },
-    take: MAX_POR_EJECUCION,
+    take: cabenAhora,
   });
   if (pending.length === 0) {
     return { ok: false, reason: "no_pending", message: "No hay mensajes pendientes para este post." };
@@ -282,6 +315,11 @@ export async function sendPostMessages(
     },
   });
 
+  // Se vuelve a leer en vez de restar `sent` del valor de antes: entre medias
+  // puede haber enviado otra campana, u otro proceso. El dato que se ensena
+  // tiene que ser el de verdad.
+  const cuotaFinal = await estadoCuota();
+
   return {
     ok: true,
     postId,
@@ -290,6 +328,7 @@ export async function sendPostMessages(
     failed,
     pendientesRestantes,
     cortadoPorBreaker,
+    cuota: cuotaFinal,
     results,
   };
 }
