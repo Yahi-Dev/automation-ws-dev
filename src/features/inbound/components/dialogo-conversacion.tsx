@@ -229,9 +229,14 @@ export default function DialogoConversacion({
   const finDelHilo = useRef<HTMLDivElement | null>(null)
 
   const max = conversacion?.maxCaracteres ?? 1600
+  // Mientras se carga todavia no se sabe nada de la ventana ni del permiso.
+  // Sin esta distincion, el hueco de escribir decia "el plazo para contestar ya
+  // paso" durante el segundo que tarda en llegar la conversacion, que es
+  // exactamente lo contrario de lo que suele ser verdad.
+  const cargando = isLoading || !conversacion
   const puedeResponder = Boolean(conversacion?.ventana.abierta)
   const dadoDeBaja = conversacion?.contacto?.consentState === "opted_out"
-  const bloqueado = !puedeResponder || dadoDeBaja
+  const bloqueado = !cargando && (!puedeResponder || dadoDeBaja)
 
   // El hilo se coloca siempre en el último mensaje, como cualquier chat.
   useEffect(() => {
@@ -239,7 +244,9 @@ export default function DialogoConversacion({
     finDelHilo.current?.scrollIntoView({ block: "end" })
   }, [open, conversacion?.mensajes.length])
 
-  const titulo = conversacion?.contacto?.name || "Número no guardado"
+  const titulo = cargando
+    ? "Cargando…"
+    : conversacion?.contacto?.name || "Número no guardado"
   const telefono = conversacion?.telefono ?? ""
 
   /**
@@ -352,7 +359,11 @@ export default function DialogoConversacion({
           className="shrink-0 border-t bg-white px-4 py-3 sm:px-6"
           data-tour="conversacion-caja"
         >
-          {bloqueado ? (
+          {cargando ? (
+            <p className="py-1 text-center text-sm text-muted-foreground">
+              Abriendo la conversación…
+            </p>
+          ) : bloqueado ? (
             <p className="py-1 text-center text-sm text-muted-foreground">
               {dadoDeBaja
                 ? "No se puede escribir a quien pidió la baja."
