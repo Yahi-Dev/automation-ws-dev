@@ -67,7 +67,7 @@ export function MessageAssignForm() {
 
   const validateForm = (): boolean => {
     if (!selectedPost) {
-      toast.error("Por favor selecciona un post")
+      toast.error("Elige primero una campaña")
       return false
     }
     if (selectedContacts.length === 0) {
@@ -123,9 +123,10 @@ export function MessageAssignForm() {
   return (
     <Card className="w-full max-w-6xl mx-auto">
       <CardHeader className="bg-white border-b">
-        <CardTitle className="text-3xl font-bold text-gray-900">Asignar Mensaje a Contactos</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">Elegir quién recibe una campaña</CardTitle>
         <CardDescription className="text-lg text-gray-600">
-          Selecciona un post y los contactos a los que quieres enviarlo
+          Elige una campaña y marca a las personas que la van a recibir. Guardar esto
+          <strong> todavía no manda nada</strong>: solo deja apuntado quién la recibirá.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -141,10 +142,10 @@ export function MessageAssignForm() {
             <div className="space-y-4" data-tour="asignar-campana">
               <div className="space-y-2">
                 <Label className="text-sm font-semibold text-gray-700">
-                  Seleccionar Post <span className="text-red-700">*</span>
+                  Elige la campaña <span className="text-red-700">*</span>
                 </Label>
                 <p className="text-sm text-gray-500">
-                  Elige el post que quieres asignar a los contactos
+                  Es el mensaje que le va a llegar a la gente
                 </p>
               </div>
 
@@ -162,7 +163,7 @@ export function MessageAssignForm() {
                   <div className="p-2 space-y-2">
                     {posts.length === 0 ? (
                       <div className="text-center py-8 text-gray-500">
-                        <p>No hay posts disponibles</p>
+                        <p>Todavía no has creado ninguna campaña.</p>
                         <Link href="/posts/create">
                           <Button variant="outline" className="mt-2">
                             Crear primer post
@@ -188,7 +189,7 @@ export function MessageAssignForm() {
                               <div className="flex-shrink-0 w-16 h-16 relative rounded-md overflow-hidden border">
                                 <Image
                                   src={postFirstImage}
-                                  alt="Imagen del post"
+                                  alt="Imagen de la campaña"
                                   fill
                                   className="object-cover"
                                 />
@@ -366,7 +367,7 @@ export function MessageAssignForm() {
                   <div className="flex-shrink-0 w-20 h-20 relative rounded-md overflow-hidden border">
                     <Image
                       src={firstImageUrl}
-                      alt="Vista previa del post"
+                      alt="Vista previa de la campaña"
                       fill
                       className="object-cover"
                     />
@@ -374,7 +375,7 @@ export function MessageAssignForm() {
                 )}
                 <div className="flex-1">
                   <p className="text-sm text-blue-800 mb-2">
-                    <strong>Post:</strong> &quot;{selectedPostData.text.slice(0, 100)}...&quot;
+                    <strong>Campaña:</strong> &quot;{selectedPostData.text.slice(0, 100)}...&quot;
                   </p>
                   <p className="text-sm text-blue-800">
                     Será asignado a <strong>{selectedContacts.length} contacto(s)</strong>
@@ -384,9 +385,14 @@ export function MessageAssignForm() {
             </div>
           )}
 
-          <div className="flex justify-end gap-4 mt-8">
-            <Link href="/messages">
-              <Button variant="outline" type="button" disabled={isAssigning}>
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
+            <Link href="/messages" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                type="button"
+                disabled={isAssigning}
+                className="w-full sm:w-auto"
+              >
                 Cancelar
               </Button>
             </Link>
@@ -394,7 +400,7 @@ export function MessageAssignForm() {
               type="submit" 
               data-tour="asignar-guardar"
               disabled={isAssigning || !selectedPost || selectedContacts.length === 0 || posts.length === 0 || contacts.length === 0}
-              className="min-w-40"
+              className="w-full sm:w-auto sm:min-w-40"
             >
               {isAssigning ? (
                 <>

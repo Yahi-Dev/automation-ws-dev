@@ -225,7 +225,7 @@ function BotonAyudaInterno() {
       type="button"
       onClick={() => lanzar(recorrido)}
       // Fijo abajo a la derecha, por encima de todo y siempre visible.
-      className="fixed bottom-6 right-6 z-50 flex items-center gap-2 rounded-full bg-emerald-600 px-5 py-3 text-base font-semibold text-white shadow-lg transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 print:hidden"
+      className="fixed bottom-4 right-4 z-50 flex items-center gap-2 rounded-full bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:bg-emerald-700 focus:outline-none focus-visible:ring-4 focus-visible:ring-emerald-300 sm:bottom-6 sm:right-6 sm:px-5 sm:py-3 sm:text-base print:hidden"
       aria-label={`Ver la ayuda de ${recorrido.nombre}`}
       title={recorrido.resumen}
     >

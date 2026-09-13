@@ -116,13 +116,13 @@ export function LoginInner() {
 
   return (
     <AuthLayout>
-      <div className="relative flex min-h-[85vh] items-center justify-center p-6">
+      <div className="relative flex min-h-[85vh] items-center justify-center p-4 sm:p-6">
         <Card className="w-full max-w-5xl overflow-hidden border-0 bg-white/95 shadow-[0_20px_60px_rgba(0,0,0,0.4)] backdrop-blur-xl">
           <CardContent className="p-0">
             <div className="grid lg:grid-cols-2">
-              <div className="relative bg-gradient-to-br from-white via-white to-gray-50/50 p-10 lg:p-12">
+              <div className="relative bg-gradient-to-br from-white via-white to-gray-50/50 p-6 sm:p-10 lg:p-12">
                 <div className="mb-10">
-                  <h1 className="text-4xl font-bold tracking-tight text-gray-900">INICIAR SESIÓN</h1>
+                  <h1 className="text-2xl font-bold tracking-tight text-gray-900 sm:text-3xl lg:text-4xl">INICIAR SESIÓN</h1>
                   <div className="mt-3 h-1.5 w-20 rounded-full bg-gradient-to-r from-green-500 to-emerald-500" />
                   <p className="mt-4 text-gray-600">¡Bienvenido de nuevo! Por favor inicia sesión en tu cuenta.</p>
                 </div>
@@ -260,7 +260,7 @@ export function LoginInner() {
                 )}
               </div>
 
-              <div className="relative bg-gradient-to-br from-gray-50 to-gray-100/80 p-10 lg:p-12 flex flex-col items-center justify-center min-h-[400px]">
+              <div className="relative bg-gradient-to-br from-gray-50 to-gray-100/80 p-6 sm:p-10 lg:p-12 flex flex-col items-center justify-center min-h-[400px]">
                 <div className="flex flex-col items-center justify-center space-y-8 w-full max-w-md">
                   <div className="rounded-2xl bg-white p-6 shadow-lg">
                     <Image

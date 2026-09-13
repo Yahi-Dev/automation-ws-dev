@@ -26,7 +26,7 @@ export function MainDashboard() {
 
   if (error) {
     return (
-      <div className="p-6 space-y-6 bg-gray-50/50 min-h-screen">
+      <div className="min-h-screen space-y-6 bg-gray-50/50 p-4 pb-28 sm:p-6 sm:pb-28">
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-2xl font-bold text-gray-900">Panel de Control</h1>
@@ -51,27 +51,31 @@ export function MainDashboard() {
   }
 
   return (
-    <div className="p-6 space-y-6 bg-gray-50/50 min-h-screen">
+    <div className="min-h-screen space-y-6 bg-gray-50/50 p-4 pb-28 sm:p-6 sm:pb-28">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Panel de Control</h1>
-          <p className="text-gray-600 mt-1">Gestiona tu automatización de mensajes</p>
+          <h1 className="text-2xl font-bold text-gray-900 sm:text-3xl">Inicio</h1>
+          <p className="text-gray-600 mt-1">
+            De un vistazo, cómo van tus mensajes de WhatsApp. Desde aquí no se envía nada.
+          </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
+        {/* En el móvil los dos botones se apilan y ocupan todo el ancho: en fila
+            no caben, y el que se sale es siempre el importante. */}
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <Button
+            variant="outline"
             onClick={refetch}
             disabled={isLoading}
-            className="gap-2"
+            className="w-full gap-2 sm:w-auto"
           >
             <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
             Actualizar
           </Button>
-          <Link href="/messages/assign" data-tour="panel-nuevo-mensaje">
-            <Button className="bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-md hover:shadow-lg transition-all">
+          <Link href="/messages/assign" data-tour="panel-nuevo-mensaje" className="w-full sm:w-auto">
+            <Button className="w-full bg-emerald-600 hover:bg-emerald-700 text-white gap-2 shadow-md hover:shadow-lg transition-all sm:w-auto">
               <Plus size={18} />
-              Nuevo Mensaje
+              Elegir quién recibe una campaña
             </Button>
           </Link>
         </div>

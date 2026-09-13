@@ -193,9 +193,9 @@ export default function ConsentTable() {
   )
 
   return (
-    <div className="container mx-auto py-5 px-5">
+    <div className="container mx-auto px-5 py-5 pb-28">
       <div className="mb-6" data-tour="consentimiento-encabezado">
-        <h1 className="text-3xl font-bold">Seguimiento de Consentimiento</h1>
+        <h1 className="text-2xl font-bold sm:text-3xl">Consentimiento</h1>
         <p className="text-muted-foreground">
           Historial de altas y bajas de cada contacto. Es la prueba de que aceptaron recibir mensajes.
         </p>

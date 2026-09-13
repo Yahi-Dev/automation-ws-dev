@@ -42,9 +42,9 @@ const data = {
     },
   ],
   navMain: [
-    { title: "Dashboard", url: "/dashboard", icon: IconDashboard },
+    { title: "Inicio", url: "/dashboard", icon: IconDashboard },
     { title: "Contactos", url: "/contacts", icon: IconAddressBook },
-    { title: "Posts", url: "/posts", icon: IconBrowserShare },
+    { title: "Campañas", url: "/posts", icon: IconBrowserShare },
     { title: "Calendario", url: "/posts/calendar", icon: IconCalendarWeekFilled },
     { title: "Mensajes", url: "/messages", icon: IconBrandTelegram },
     { title: "Entrantes", url: "/entrantes", icon: IconInbox },

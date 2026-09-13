@@ -214,7 +214,7 @@ export default function AceptarInvitacionForm() {
           subtitulo="Es tu primer acceso a la plataforma"
         />
 
-        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-8">
+        <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 sm:p-8">
           <p className="text-sm text-gray-600">
             Elige la contraseña con la que entrarás a partir de ahora. Debe tener al menos{" "}
             {LONGITUD_MINIMA} caracteres.

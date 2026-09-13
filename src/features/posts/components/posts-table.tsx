@@ -274,7 +274,7 @@ export default function PostsTable() {
               open={isDeleteModalOpen && currentPostId === post.id}
               onOpenChange={setIsDeleteModalOpen}
               onConfirm={handleConfirmDelete}
-              entityName="Post"
+              entityName="campaña"
               description="Esta acción no se puede deshacer. El post y todas sus imágenes serán eliminados permanentemente."
             >
               <span className="hidden" />
@@ -286,10 +286,13 @@ export default function PostsTable() {
   ]
 
   return (
-    <div className="container mx-auto py-5 px-5">
+    <div className="container mx-auto px-5 py-5 pb-28">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold">Gestión de Posts</h1>
-        <p className="text-muted-foreground">Administra los posts programados para publicación</p>
+        <h1 className="text-2xl font-bold sm:text-3xl">Campañas</h1>
+        <p className="text-muted-foreground">
+          Aquí escribes los mensajes que vas a mandar. Escribir uno no manda nada todavía: el
+          envío se hace desde el menú de cada campaña, con <strong>Enviar campaña</strong>.
+        </p>
       </div>
 
       {primaryLoading ? (
@@ -298,10 +301,10 @@ export default function PostsTable() {
         <DataTable
           columns={columns}
           data={posts}
-          createButtonText="Nuevo Post"
+          createButtonText="Nueva campaña"
           showCreateButton={true}
           onCreateClick={handleCreatePost}
-          searchPlaceholder="Buscar en contenido..."
+          searchPlaceholder="Buscar por lo que dice el mensaje..."
           dateColumnId="schedule"
           showDateRangeFilter={true}
         />

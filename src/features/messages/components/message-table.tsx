@@ -90,7 +90,7 @@ export default function MessagesTable() {
     },
     {
       accessorKey: "post.text",
-      header: "Contenido del Post",
+      header: "Mensaje de la campaña",
       cell: ({ row }) => {
         const post = row.original.post
         const truncatedText = post.text.length > 80 ? `${post.text.substring(0, 80)}...` : post.text
@@ -261,10 +261,13 @@ export default function MessagesTable() {
   )
 
   return (
-    <div className="container mx-auto py-5 px-5">
+    <div className="container mx-auto px-5 py-5 pb-28">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold">Gestión de Mensajes</h1>
-        <p className="text-muted-foreground">Administra los mensajes asignados a contactos</p>
+        <h1 className="text-2xl font-bold sm:text-3xl">Mensajes</h1>
+        <p className="text-muted-foreground">
+          Cada línea es un mensaje de una campaña para una persona. Aquí ves si salió, si le
+          llegó al teléfono y si lo leyó.
+        </p>
       </div>
 
       <div className="mb-4 flex flex-wrap gap-2" data-tour="mensajes-filtros">
@@ -293,7 +296,7 @@ export default function MessagesTable() {
         <DataTable
           columns={columns}
           data={messages}
-          createButtonText="Asignar Mensaje"
+          createButtonText="Elegir quién recibe"
           showCreateButton={true}
           onCreateClick={handleAssignMessage}
           searchPlaceholder="Buscar en mensajes..."

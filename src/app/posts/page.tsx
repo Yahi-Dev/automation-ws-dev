@@ -4,7 +4,7 @@ import PostsTable from '@/src/features/posts/components/posts-table';
 import { verifyAuth } from '@/src/hooks/use-auth';
 
 const breadcrumbs = [
-  { title: 'Posts', href: '#' },
+  { title: 'Campañas', href: '#' },
 ];
 
 const PostsPage = async () => {

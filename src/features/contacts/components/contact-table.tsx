@@ -250,13 +250,16 @@ export default function ContactsTable() {
   }
 
   return (
-    <div className="container mx-auto py-5 px-5">
-      <div className="mb-8 flex items-start justify-between gap-4">
+    <div className="container mx-auto px-5 py-5 pb-28">
+      <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Gestión de Contactos</h1>
-          <p className="text-muted-foreground">Administra los contactos del sistema</p>
+          <h1 className="text-2xl font-bold sm:text-3xl">Contactos</h1>
+          <p className="text-muted-foreground">
+            La lista de personas a las que les puedes escribir. Aquí las agregas, las buscas y
+            ves quién te dio permiso para mandarle mensajes.
+          </p>
         </div>
-        <div>
+        <div className="shrink-0">
           <input
             ref={fileInputRef}
             type="file"
@@ -269,6 +272,7 @@ export default function ContactsTable() {
             data-tour="importar-contactos"
             onClick={() => fileInputRef.current?.click()}
             disabled={isImporting}
+            className="w-full sm:w-auto"
           >
             {isImporting ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -286,7 +290,7 @@ export default function ContactsTable() {
         <DataTable
           columns={columns}
           data={contacts}
-          createButtonText="Agregar Contacto"
+          createButtonText="Agregar contacto"
           showCreateButton={true}
           dateColumnId="createdAt"
           onCreateClick={handleCreateContact}

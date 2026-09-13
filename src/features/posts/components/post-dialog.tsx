@@ -68,8 +68,8 @@ export const PostDialog = ({ id, isOpen, onOpenChange, onEditClick }: PostDialog
       <Dialog open={isOpen} onOpenChange={handleOpenChange}>
         <DialogContent className="sm:max-w-[480px] w-[92vw] rounded-xl bg-white border-gray-200 fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]">
           <DialogHeader>
-            <DialogTitle className="text-xl font-semibold text-gray-900">Post No Encontrado</DialogTitle>
-            <DialogDescription className="text-gray-600">El post solicitado no fue encontrado.</DialogDescription>
+            <DialogTitle className="text-xl font-semibold text-gray-900">No se encontró la campaña</DialogTitle>
+            <DialogDescription className="text-gray-600">Esa campaña ya no existe. Puede que la hayan borrado.</DialogDescription>
           </DialogHeader>
           <div className="text-sm text-gray-600">Por favor intenta nuevamente desde la lista.</div>
         </DialogContent>
@@ -83,7 +83,7 @@ export const PostDialog = ({ id, isOpen, onOpenChange, onEditClick }: PostDialog
         <DialogContent className="sm:max-w-[480px] w-[92vw] rounded-xl bg-white border-gray-200 fixed left-[50%] top-[50%] z-50 translate-x-[-50%] translate-y-[-50%]">
           <DialogHeader>
             <DialogTitle className="text-xl font-semibold text-gray-900">Cargando…</DialogTitle>
-            <DialogDescription className="text-gray-600">Obteniendo información del post</DialogDescription>
+            <DialogDescription className="text-gray-600">Buscando la campaña...</DialogDescription>
           </DialogHeader>
           <div className="h-2 w-full rounded bg-gray-200 overflow-hidden">
             <div className="h-full w-1/2 animate-pulse bg-blue-500" />
@@ -304,7 +304,7 @@ export const PostDialog = ({ id, isOpen, onOpenChange, onEditClick }: PostDialog
           {/* Footer */}
           <div className="flex justify-between items-center pt-4 px-6 pb-6 border-t border-gray-200 bg-white">
             <div className="text-sm text-gray-600">
-              Post ID: <span className="font-mono font-semibold">{post?.id}</span>
+              Número de campaña: <span className="font-mono font-semibold">{post?.id}</span>
             </div>
             <div className="flex gap-3">
               {onEditClick && (

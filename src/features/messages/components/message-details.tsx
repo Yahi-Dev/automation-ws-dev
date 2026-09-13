@@ -19,7 +19,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
 
   if (loading) {
     return (
-      <div className="container mx-auto py-8 max-w-6xl">
+      <div className="container mx-auto max-w-6xl px-4 py-8 pb-28 sm:px-5">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-8">
           <div className="space-y-2">
             <Skeleton className="h-8 w-64" />
@@ -44,7 +44,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
 
   if (error || !message) {
     return (
-      <div className="container mx-auto py-8 max-w-4xl">
+      <div className="container mx-auto max-w-4xl px-4 py-8 pb-28 sm:px-5">
         <Card className="border-red-200">
           <CardContent className="p-8 text-center">
             <XCircle className="h-16 w-16 text-red-500 mx-auto mb-4" />
@@ -111,7 +111,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
   const firstImage = postImages[0]
 
   return (
-    <div className="container mx-auto py-8 max-w-6xl">
+    <div className="container mx-auto max-w-6xl px-4 py-8 pb-28 sm:px-5">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-start lg:justify-between gap-6 mb-8">
         <div className="flex-1">
@@ -120,7 +120,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
               <MessageCircle className="h-6 w-6 text-green-600" />
             </div>
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Detalles del Mensaje</h1>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Detalles del Mensaje</h1>
               <p className="text-gray-600 mt-1">
                 Información completa sobre el mensaje y su estado de envío
               </p>
@@ -157,7 +157,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
                     <div className="relative aspect-video w-full">
                       <Image
                         src={firstImage.url}
-                        alt="Imagen del post"
+                        alt="Imagen de la campaña"
                         fill
                         className="object-cover"
                         sizes="(max-width: 768px) 100vw, (max-width: 1200px) 66vw, 50vw"
@@ -317,7 +317,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="flex items-center gap-3">
               <div className="w-3 h-3 bg-green-500 rounded-full"></div>
               <div>
@@ -331,7 +331,7 @@ export function MessageDetails({ id }: MessageDetailsProps) {
             {message.sentAt && (
               <div className="flex items-center gap-3">
                 <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                <div className="text-right">
+                <div className="sm:text-right">
                   <p className="font-semibold text-gray-900">Mensaje enviado</p>
                   <p className="text-sm text-gray-600">
                     {format(new Date(message.sentAt), "PPP 'a las' HH:mm", { locale: es })}

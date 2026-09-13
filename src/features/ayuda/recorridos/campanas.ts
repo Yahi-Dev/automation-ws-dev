@@ -21,7 +21,7 @@ export const recorridoCampanas: RecorridoAyuda = {
       elemento: '[data-tour="tabla-boton-crear"]',
       titulo: "Escribir una campaña nueva",
       descripcion:
-        "El botón dice <strong>Nuevo Post</strong>. Púlsalo y se abre una pantalla para escribir el mensaje.<br>Pones el texto, la fecha y, si quieres, una foto.<br>Al guardarlo aparece en esta lista. Todavía no le llega a nadie: solo queda guardado.",
+        "El botón dice <strong>Nueva campaña</strong>. Púlsalo y se abre una pantalla para escribir el mensaje.<br>Pones el texto, la fecha y, si quieres, una foto.<br>Al guardarlo aparece en esta lista. Todavía no le llega a nadie: solo queda guardado.",
       lado: "bottom",
       alineacion: "end",
     },

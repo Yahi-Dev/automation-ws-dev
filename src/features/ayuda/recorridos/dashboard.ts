@@ -64,7 +64,7 @@ export const recorridoDashboard: RecorridoAyuda = {
       elemento: 'a[href="/posts"]',
       titulo: "Campañas: lo que vas a decir",
       descripcion:
-        "En el menú se llama <strong>Posts</strong>, pero es donde escribes tus campañas.<br>Redactas el mensaje con calma, le pones una foto si quieres, y lo guardas. Escribirlo aquí no manda nada todavía: solo lo dejas preparado.",
+        "Aquí escribes tus campañas: el mensaje que le va a llegar a la gente.<br>Lo redactas con calma, le pones una foto si quieres, y lo guardas. Escribirlo aquí no manda nada todavía: solo lo dejas preparado.",
       lado: "right",
     },
     {
@@ -78,14 +78,14 @@ export const recorridoDashboard: RecorridoAyuda = {
       elemento: 'a[href="/messages"]',
       titulo: "Mensajes: a quién se le manda",
       descripcion:
-        "Aquí escoges qué personas van a recibir cada campaña.<br>Guardar esa pareja todavía no envía nada ni te cuesta dinero. El envío de verdad se hace después en <strong>Posts</strong>, con la opción <strong>Enviar campaña</strong>.",
+        "Aquí escoges qué personas van a recibir cada campaña.<br>Guardar esa pareja todavía no envía nada ni te cuesta dinero. El envío de verdad se hace después en <strong>Campañas</strong>, con la opción <strong>Enviar campaña</strong>.",
       lado: "right",
     },
     {
       elemento: 'a[href="/entrantes"]',
-      titulo: "Entrantes: lo que te contestan",
+      titulo: "Entrantes: lo que te contestan y donde les contestas",
       descripcion:
-        "Cuando alguien te responde, su mensaje cae aquí. Entra de vez en cuando a leerlos. Si una persona escribe <strong>BAJA</strong>, la aplicación le quita el permiso sola y deja de escribirle. Tú solo lo ves aquí, ya hecho.",
+        "Cuando alguien te responde, su mensaje cae aquí. Y desde aquí puedes contestarle: se abre la conversación como un chat de WhatsApp normal.<br>Es el único sitio donde se puede, porque el número de la aplicación no se abre desde el móvil.<br>Si una persona escribe <strong>BAJA</strong>, la aplicación le quita el permiso sola y deja de escribirle.",
       lado: "right",
     },
     {

@@ -4,7 +4,7 @@ import PostsCalendar from "@/src/features/posts/components/posts-calendar"
 import { verifyAuth } from "@/src/hooks/use-auth";
 
 const breadcrumbs = [
-  { title: "Posts", href: "/posts" },
+  { title: "Campañas", href: "/posts" },
   { title: "Calendario", href: "#" },
 ]
 

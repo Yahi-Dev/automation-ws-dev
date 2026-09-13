@@ -129,28 +129,30 @@ export default function PostsCalendar() {
     []
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto px-4 py-6 pb-28 space-y-6 sm:px-5">
       {/* Header */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Calendario de Posts</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">Calendario de campañas</h1>
           <p className="text-gray-600 mt-2">
-            Visualiza y gestiona todos tus posts programados en un calendario
+            Mira en qué día tienes preparada cada campaña. Pulsa un día para ver las de esa
+            fecha.
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <Button
+            variant="outline"
             onClick={() => router.push("/posts")}
+            className="w-full sm:w-auto"
           >
-            Vista de Tabla
+            Ver la lista completa
           </Button>
-          <Button 
+          <Button
             onClick={handleCreatePost}
-            className="flex items-center gap-2"
+            className="flex w-full items-center justify-center gap-2 sm:w-auto"
           >
             <Plus className="h-4 w-4" />
-            Nuevo Post
+            Nueva campaña
           </Button>
         </div>
       </div>
@@ -161,7 +163,7 @@ export default function PostsCalendar() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-gray-600">Total Posts</p>
+                <p className="text-sm font-medium text-gray-600">Campañas</p>
                 <p className="text-2xl font-bold text-gray-900">{posts.length}</p>
               </div>
               <div className="p-3 bg-blue-100 rounded-lg">
@@ -267,7 +269,7 @@ export default function PostsCalendar() {
                       <div
                         key={day.toISOString()}
                         className={cn(
-                          "aspect-square rounded-lg border-2 p-2 cursor-pointer transition-all hover:bg-gray-50",
+                          "aspect-square rounded-lg border-2 p-1 sm:p-2 cursor-pointer transition-all hover:bg-gray-50",
                           isToday && "border-blue-500 bg-blue-50",
                           isSelected && "border-blue-500 bg-blue-100",
                           !isCurrentMonth && "text-gray-400 bg-gray-50",
@@ -291,7 +293,7 @@ export default function PostsCalendar() {
                         </div>
 
                         {/* Posts Preview */}
-                        <div className="flex-1 overflow-hidden mt-1 space-y-1">
+                        <div className="hidden flex-1 overflow-hidden mt-1 space-y-1 sm:block">
                           {dayPosts.slice(0, 2).map(post => (
                             <div
                               key={post.id}
@@ -326,7 +328,7 @@ export default function PostsCalendar() {
           <CardHeader>
             <CardTitle>
               {selectedDate ? (
-                `Posts para ${format(selectedDate, 'PPP', { locale: es })}`
+                `Campañas del ${format(selectedDate, 'PPP', { locale: es })}`
               ) : (
                 "Selecciona una fecha"
               )}
@@ -339,12 +341,12 @@ export default function PostsCalendar() {
             {!selectedDate ? (
               <div className="text-center text-gray-500 py-8">
                 <Calendar className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p>Selecciona una fecha en el calendario para ver los posts programados</p>
+                <p>Pulsa un día del calendario para ver las campañas que tienes preparadas para esa fecha.</p>
               </div>
             ) : postsForSelectedDate.length === 0 ? (
               <div className="text-center text-gray-500 py-8">
                 <Clock className="h-12 w-12 mx-auto text-gray-300 mb-3" />
-                <p>No hay posts programados para esta fecha</p>
+                <p>No hay ninguna campaña preparada para este día.</p>
                 <Button 
                   variant="outline" 
                   className="mt-3"

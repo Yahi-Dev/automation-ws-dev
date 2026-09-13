@@ -159,7 +159,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
 
     const result = await update(payload)
     if (result?.success) {
-      toast.success("Post actualizado exitosamente", {
+      toast.success("Campaña guardada", {
         description: "Los cambios han sido guardados y el post ha sido reprogramado.",
         duration: 4000,
       })
@@ -178,7 +178,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
       <Card className="w-full max-w-4xl mx-auto">
         <CardContent className="p-6 flex justify-center items-center h-64">
           <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="ml-2">Cargando post...</span>
+          <span className="ml-2">Cargando la campaña...</span>
         </CardContent>
       </Card>
     )
@@ -187,7 +187,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="bg-white border-b">
-        <CardTitle className="text-3xl font-bold text-gray-900">Editar Post</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">Editar campaña</CardTitle>
         <CardDescription className="text-lg text-gray-600">
           Modifica los campos para actualizar el post
         </CardDescription>
@@ -234,7 +234,7 @@ export function EditPostForm({ id }: EditPostFormProps) {
                 <Textarea
                   id="text"
                   data-tour="campana-editar-texto"
-                  placeholder="Escribe el contenido del post aquí..."
+                  placeholder="Escribe aquí el mensaje que le va a llegar a la gente..."
                   className="bg-white min-h-[120px] resize-vertical"
                   value={formData.text}
                   onChange={(e) => setField("text", e.target.value)}
@@ -330,20 +330,31 @@ export function EditPostForm({ id }: EditPostFormProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 mt-8">
-              <Link href="/posts">
-                <Button variant="outline" type="button" data-tour="campana-editar-cancelar" disabled={isLoading}>
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
+              <Link href="/posts" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  type="button"
+                  data-tour="campana-editar-cancelar"
+                  disabled={isLoading}
+                  className="w-full sm:w-auto"
+                >
                   Cancelar
                 </Button>
               </Link>
-              <Button type="submit" data-tour="campana-editar-guardar" disabled={isLoading || isUploading}>
+              <Button
+                type="submit"
+                data-tour="campana-editar-guardar"
+                disabled={isLoading || isUploading}
+                className="w-full sm:w-auto"
+              >
                 {(isLoading || isUploading) ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     {isUploading ? "Subiendo..." : "Actualizando..."}
                   </>
                 ) : (
-                  "Actualizar Post"
+                  "Guardar cambios"
                 )}
               </Button>
             </div>

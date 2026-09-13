@@ -45,8 +45,8 @@ export default function RegistroPage() {
     <AuthLayout>
       <div className="relative flex min-h-[85vh] items-center justify-center p-6">
         <Card className="w-full max-w-md border-0 bg-white/95 shadow-xl backdrop-blur-xl">
-          <CardContent className="p-8">
-            <h1 className="text-3xl font-bold tracking-tight text-gray-900 mb-1">Crear cuenta</h1>
+          <CardContent className="p-6 sm:p-8">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-gray-900 mb-1">Crear cuenta</h1>
             <p className="text-gray-600 mb-6">Tu cuenta quedará pendiente de aprobación por un administrador.</p>
 
             {done ? (

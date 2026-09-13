@@ -140,7 +140,7 @@ export function CreatePostForm() {
 
     const result = await create(payload)
     if (result?.success) {
-      toast.success("Post creado exitosamente")
+      toast.success("Campaña creada")
       setFormData({ schedule: "", text: "", friendlyName: "", templateType: "" })
       setImages([])
     }
@@ -156,7 +156,7 @@ export function CreatePostForm() {
   return (
     <Card className="w-full max-w-4xl mx-auto">
       <CardHeader className="bg-white border-b">
-        <CardTitle className="text-3xl font-bold text-gray-900">Crear Nuevo Post</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">Nueva campaña</CardTitle>
         <CardDescription className="text-lg text-gray-600">
           Programa un nuevo post para publicación
         </CardDescription>
@@ -261,7 +261,7 @@ export function CreatePostForm() {
               <Textarea
                 id="text"
                 data-tour="campana-crear-texto"
-                placeholder="Escribe el contenido del post aquí..."
+                placeholder="Escribe aquí el mensaje que le va a llegar a la gente..."
                 className="bg-white min-h-[120px] resize-vertical"
                 value={formData.text}
                 onChange={(e) => setField("text", e.target.value)}
@@ -351,20 +351,30 @@ export function CreatePostForm() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-4 mt-8">
-            <Link href="/posts">
-              <Button variant="outline" type="button" disabled={isLoading}>
+          <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
+            <Link href="/posts" className="w-full sm:w-auto">
+              <Button
+                variant="outline"
+                type="button"
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+              >
                 Cancelar
               </Button>
             </Link>
-            <Button type="submit" data-tour="campana-crear-guardar" disabled={isLoading || isUploading}>
+            <Button
+              type="submit"
+              data-tour="campana-crear-guardar"
+              disabled={isLoading || isUploading}
+              className="w-full sm:w-auto"
+            >
               {(isLoading || isUploading) ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   {isUploading ? "Subiendo..." : "Creando..."}
                 </>
               ) : (
-                "Crear Post"
+                "Guardar campaña"
               )}
             </Button>
           </div>

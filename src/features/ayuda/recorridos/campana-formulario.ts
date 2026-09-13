@@ -25,7 +25,7 @@ export const recorridoCampanaCrear: RecorridoAyuda = {
     {
       titulo: "Aquí escribes el mensaje",
       descripcion:
-        "Esta pantalla se llama <strong>Crear Nuevo Post</strong>. Aquí escribes el mensaje que quieres mandar.<br>Tranquila: <strong>guardar no manda nada</strong>. El mensaje queda apuntado en la lista y ya decidirás después a quién se lo mandas.",
+        "Esta pantalla se llama <strong>Nueva campaña</strong>. Aquí escribes el mensaje que quieres mandar.<br>Tranquila: <strong>guardar no manda nada</strong>. El mensaje queda apuntado en la lista y ya decidirás después a quién se lo mandas.",
     },
     {
       elemento: '[data-tour="campana-crear-texto"]',
@@ -75,7 +75,7 @@ export const recorridoCampanaCrear: RecorridoAyuda = {
       elemento: '[data-tour="campana-crear-guardar"]',
       titulo: "Guardar el mensaje",
       descripcion:
-        "El botón dice <strong>Crear Post</strong>. Al pulsarlo, el mensaje queda guardado en la lista de campañas.<br>Repito lo importante, porque asusta: <strong>esto no se lo manda a nadie</strong>. Todavía no ha salido ningún mensaje ni te han cobrado nada.",
+        "El botón dice <strong>Guardar campaña</strong>. Al pulsarlo, el mensaje queda guardado en la lista de campañas.<br>Repito lo importante, porque asusta: <strong>esto no se lo manda a nadie</strong>. Todavía no ha salido ningún mensaje ni te han cobrado nada.",
       lado: "top",
     },
     {
@@ -141,7 +141,7 @@ export const recorridoCampanaEditar: RecorridoAyuda = {
       elemento: '[data-tour="campana-editar-guardar"]',
       titulo: "Guardar los cambios",
       descripcion:
-        "El botón dice <strong>Actualizar Post</strong>. Al pulsarlo se guardan los cambios y vuelves a la lista de campañas.<br>Guardar <strong>no manda nada</strong>: el mensaje sigue esperando a que tú digas a quién se le envía.",
+        "El botón dice <strong>Guardar cambios</strong>. Al pulsarlo se guardan y vuelves a la lista de campañas.<br>Guardar <strong>no manda nada</strong>: el mensaje sigue esperando a que tú digas a quién se le envía.",
       lado: "top",
     },
     {

@@ -266,7 +266,7 @@ export function UsersTable() {
 
   return (
     <div className="space-y-4">
-      <div data-tour="usuarios-filtros" className="flex gap-2">
+      <div data-tour="usuarios-filtros" className="flex flex-wrap gap-2">
         {FILTERS.map((f) => (
           <Button
             key={f.key || "all"}

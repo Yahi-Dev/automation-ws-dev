@@ -19,9 +19,9 @@ export const recorridoMensajes: RecorridoAyuda = {
     },
     {
       elemento: '[data-tour="tabla-boton-crear"]',
-      titulo: "Asignar Mensaje: el paso que todos se saltan",
+      titulo: "Elegir quién recibe: el paso que todos se saltan",
       descripcion:
-        "Pulsa aquí para juntar una campaña con las personas que la van a recibir.<br>Mientras no hagas esto, esa campaña no se le puede mandar a nadie. Es el paso que más se olvida.",
+        "El botón dice <strong>Elegir quién recibe</strong>. Púlsalo para juntar una campaña con las personas que la van a recibir.<br>Mientras no hagas esto, esa campaña no se le puede mandar a nadie. Es el paso que más se olvida.",
       lado: "bottom",
       alineacion: "end",
     },
@@ -29,7 +29,7 @@ export const recorridoMensajes: RecorridoAyuda = {
       elemento: '[data-tour="asignar-campana"]',
       titulo: "Primero: escoge la campaña",
       descripcion:
-        "Ya dentro de asignar, esta es la parte de la izquierda.<br>Pulsa encima de la campaña que quieres mandar. Se le pone un borde azul para que veas cuál escogiste.",
+        "Ya dentro, esta es la parte de la izquierda.<br>Pulsa encima de la campaña que quieres mandar. Se le pone un borde azul para que veas cuál escogiste.",
       lado: "right",
     },
     {
@@ -43,7 +43,7 @@ export const recorridoMensajes: RecorridoAyuda = {
       elemento: '[data-tour="asignar-guardar"]',
       titulo: "Guardar a quién se le manda",
       descripcion:
-        "Este botón te dice a cuántas personas se va a asignar.<br>Al pulsarlo se guarda esa pareja: campaña y personas. <strong>Todavía no sale ningún mensaje ni se cobra nada.</strong> Eso se hace después en <strong>Posts</strong>, la pantalla de tus campañas.",
+        "Este botón te dice a cuántas personas se va a asignar.<br>Al pulsarlo se guarda esa pareja: campaña y personas. <strong>Todavía no sale ningún mensaje ni se cobra nada.</strong> Eso se hace después en <strong>Campañas</strong>, con la opción <strong>Enviar campaña</strong>.",
       lado: "top",
     },
     {

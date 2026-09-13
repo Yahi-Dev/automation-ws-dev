@@ -80,7 +80,7 @@ export default function ForgotPasswordForm() {
                   <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-green-500 to-emerald-500 text-white shadow-xl">
                     <Mail className="h-9 w-9" />
                   </div>
-                  <h1 className="text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-3">
+                  <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-green-600 to-emerald-600 bg-clip-text text-transparent mb-3">
                     ¿Olvidaste tu contraseña?
                   </h1>
                   <p className="text-gray-600 leading-relaxed">

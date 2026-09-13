@@ -104,7 +104,7 @@ interface DataTableProps<TData, TValue> {
 export function DataTable<TData, TValue>({
   columns,
   data,
-  searchPlaceholder = "Search...",
+  searchPlaceholder = "Buscar...",
   createButtonText = "Create",
   onCreateClick,
   showCreateButton = true,
@@ -261,7 +261,7 @@ export function DataTable<TData, TValue>({
                         {dateRange.from ? formatBadgeDate(dateRange.from) : "…"} — {dateRange.to ? formatBadgeDate(dateRange.to) : "…"}
                       </span>
                     ) : (
-                      <span>Date range</span>
+                      <span>Filtrar por fecha</span>
                     )}
                   </Button>
                 </PopoverTrigger>
@@ -280,7 +280,7 @@ export function DataTable<TData, TValue>({
                   />
                   <div className="flex items-center justify-between p-2 border-t border-gray-200">
                     <div className="text-xs" style={{ color: COLORS.light }}>
-                      Filter by {dateColumnId}
+                      Se filtra por la fecha de la lista
                     </div>
                     <Button
                       variant="ghost"
@@ -289,7 +289,7 @@ export function DataTable<TData, TValue>({
                       className="hover:bg-gray-100"
                       style={{ color: COLORS.dark }}
                     >
-                      <X className="h-4 w-4 mr-1" /> Clear
+                      <X className="h-4 w-4 mr-1" /> Quitar
                     </Button>
                   </div>
                 </PopoverContent>
@@ -307,11 +307,11 @@ export function DataTable<TData, TValue>({
           {/* Quick statistics */}
           <div className="hidden md:flex items-center space-x-2">
             <Badge variant="secondary" style={{ backgroundColor: COLORS.dark, color: COLORS.white }}>
-              {totalRows} records
+              {totalRows} en total
             </Badge>
             {selectedRows > 0 && (
               <Badge variant="default" style={{ backgroundColor: COLORS.primary, color: COLORS.dark }}>
-                {selectedRows} selected
+                {selectedRows} seleccionados
               </Badge>
             )}
           </div>
@@ -410,12 +410,12 @@ export function DataTable<TData, TValue>({
                   style={{ color: COLORS.dark }}
                 >
                   <Settings2 className="mr-2 h-4 w-4" />
-                  Columns
+                  Columnas
                   <ChevronDown className="ml-2 h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48 border-gray-200">
-                <DropdownMenuLabel style={{ color: COLORS.dark }}>Show columns</DropdownMenuLabel>
+                <DropdownMenuLabel style={{ color: COLORS.dark }}>Qué columnas se ven</DropdownMenuLabel>
                 <DropdownMenuSeparator className="bg-gray-200" />
                 {table
                   .getAllColumns()
@@ -520,8 +520,8 @@ export function DataTable<TData, TValue>({
                         <Search className="h-6 w-6" style={{ color: COLORS.dark }} />
                       </div>
                       <div className="space-y-1">
-                        <p className="font-medium" style={{ color: COLORS.dark }}>No results found</p>
-                        <p className="text-sm" style={{ color: COLORS.light }}>Try adjusting your search or filters</p>
+                        <p className="font-medium" style={{ color: COLORS.dark }}>No hay nada que mostrar</p>
+                        <p className="text-sm" style={{ color: COLORS.light }}>Borra lo que escribiste en el buscador o quita los filtros para volver a verlo todo.</p>
                       </div>
                     </div>
                   </TableCell>
@@ -536,18 +536,18 @@ export function DataTable<TData, TValue>({
       {showPagination && (
         <Card className="border-gray-200 shadow-sm bg-white">
           <CardContent className="p-4">
-            <div className="flex flex-col space-y-4 md:flex-row md:items-center md:justify-between md:space-y-0">
-              <div className="flex items-center space-x-4 text-sm" style={{ color: COLORS.dark }}>
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-sm" style={{ color: COLORS.dark }}>
                 <div className="flex items-center space-x-2">
-                  <span>Showing</span>
+                  <span>Viendo</span>
                   <Badge variant="outline" className="font-mono border-gray-300" style={{ color: COLORS.dark }}>
                     {table.getRowModel().rows.length}
                   </Badge>
-                  <span>of</span>
+                  <span>de</span>
                   <Badge variant="outline" className="font-mono border-gray-300" style={{ color: COLORS.dark }}>
                     {totalRows}
                   </Badge>
-                  <span>records</span>
+                  <span>de la lista</span>
                 </div>
 
                 {selectedRows > 0 && (
@@ -557,27 +557,27 @@ export function DataTable<TData, TValue>({
                       <Badge variant="default" style={{ backgroundColor: COLORS.primary, color: COLORS.dark }}>
                         {selectedRows}
                       </Badge>
-                      <span>selected</span>
+                      <span>seleccionados</span>
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
                 <div className="flex items-center space-x-1 text-sm" style={{ color: COLORS.dark }}>
-                  <span>Page</span>
+                  <span>Página</span>
                   <Badge variant="outline" className="font-mono border-gray-300" style={{ color: COLORS.dark }}>
                     {currentPage}
                   </Badge>
-                  <span>of</span>
+                  <span>de</span>
                   <Badge variant="outline" className="font-mono border-gray-300" style={{ color: COLORS.dark }}>
                     {totalPages}
                   </Badge>
                 </div>
 
-                <Separator orientation="vertical" className="h-4 bg-gray-300" />
+                <Separator orientation="vertical" className="hidden h-4 bg-gray-300 sm:block" />
 
-                <div className="flex items-center space-x-1">
+                <div className="flex flex-wrap items-center justify-center gap-1">
                   <Button
                     variant="outline"
                     size="sm"
@@ -586,7 +586,7 @@ export function DataTable<TData, TValue>({
                     className="border-gray-300 hover:bg-gray-100"
                     style={{ color: COLORS.dark }}
                   >
-                    First
+                    Primera
                   </Button>
                   <Button
                     variant="outline"
@@ -596,7 +596,7 @@ export function DataTable<TData, TValue>({
                     className="border-gray-300 hover:bg-gray-100"
                     style={{ color: COLORS.dark }}
                   >
-                    Previous
+                    Anterior
                   </Button>
                   <Button
                     variant="outline"
@@ -606,7 +606,7 @@ export function DataTable<TData, TValue>({
                     className="border-gray-300 hover:bg-gray-100"
                     style={{ color: COLORS.dark }}
                   >
-                    Next
+                    Siguiente
                   </Button>
                   <Button
                     variant="outline"
@@ -616,7 +616,7 @@ export function DataTable<TData, TValue>({
                     className="border-gray-300 hover:bg-gray-100"
                     style={{ color: COLORS.dark }}
                   >
-                    Last
+                    Última
                   </Button>
                 </div>
               </div>

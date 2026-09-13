@@ -156,12 +156,23 @@ export function SettingsForm() {
         </CardContent>
       </Card>
 
-      <div className="flex justify-end gap-3">
-        <Button variant="outline" onClick={handleTest} disabled={testing} data-tour="probar-conexion">
+      <div className="flex flex-col gap-2 sm:flex-row sm:justify-end sm:gap-3">
+        <Button
+          variant="outline"
+          onClick={handleTest}
+          disabled={testing}
+          data-tour="probar-conexion"
+          className="w-full sm:w-auto"
+        >
           {testing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <PlugZap className="mr-2 h-4 w-4" />}
           Probar conexión
         </Button>
-        <Button onClick={handleSave} disabled={saving} data-tour="guardar-configuracion">
+        <Button
+          onClick={handleSave}
+          disabled={saving}
+          data-tour="guardar-configuracion"
+          className="w-full sm:w-auto"
+        >
           {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Save className="mr-2 h-4 w-4" />}
           Guardar
         </Button>

@@ -153,7 +153,7 @@ export function EditContactForm({ id }: EditContactFormProps) {
   return (
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="bg-white border-b">
-        <CardTitle className="text-3xl font-bold text-gray-900">Editar Contacto</CardTitle>
+        <CardTitle className="text-2xl sm:text-3xl font-bold text-gray-900">Editar Contacto</CardTitle>
         <CardDescription className="text-lg text-gray-600">
           Modifica los campos para actualizar el contacto
         </CardDescription>
@@ -220,20 +220,31 @@ export function EditContactForm({ id }: EditContactFormProps) {
               </div>
             </div>
 
-            <div className="flex justify-end gap-4 mt-8">
-              <Link href="/contacts">
-                <Button variant="outline" type="button" data-tour="contacto-editar-cancelar" disabled={isLoading}>
+            <div className="mt-8 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end sm:gap-4">
+              <Link href="/contacts" className="w-full sm:w-auto">
+                <Button
+                  variant="outline"
+                  type="button"
+                  data-tour="contacto-editar-cancelar"
+                  disabled={isLoading}
+                  className="w-full sm:w-auto"
+                >
                   Cancelar
                 </Button>
               </Link>
-              <Button type="submit" data-tour="contacto-editar-guardar" disabled={isLoading}>
+              <Button
+                type="submit"
+                data-tour="contacto-editar-guardar"
+                disabled={isLoading}
+                className="w-full sm:w-auto"
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                     Actualizando...
                   </>
                 ) : (
-                  "Actualizar Contacto"
+                  "Guardar cambios"
                 )}
               </Button>
             </div>

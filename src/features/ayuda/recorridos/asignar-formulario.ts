@@ -75,7 +75,7 @@ export const recorridoAsignar: RecorridoAyuda = {
     {
       titulo: "Y entonces, ¿cuándo se envía?",
       descripcion:
-        "El envío se hace después, en la pantalla <strong>Posts</strong>, con el botón <strong>Enviar campaña</strong>.<br>Puedes volver aquí cuando quieras y añadir más personas a la misma campaña: a las que ya estaban no se les manda dos veces.",
+        "El envío se hace después, en la pantalla <strong>Campañas</strong>, con el botón <strong>Enviar campaña</strong>.<br>Puedes volver aquí cuando quieras y añadir más personas a la misma campaña: a las que ya estaban no se les manda dos veces.",
     },
   ],
 };

@@ -5,11 +5,11 @@ import { verifyAuth } from "@/src/hooks/use-auth";
 
 const breadcrumb = [
   {
-    title: "Posts",
+    title: "Campañas",
     href: "/posts",
   },
   {
-    title: "Crear Post",
+    title: "Nueva campaña",
     href: "/posts/create",
   },
 ]
