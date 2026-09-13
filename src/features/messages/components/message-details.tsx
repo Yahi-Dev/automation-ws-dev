@@ -6,8 +6,9 @@ import { Badge } from "@/src/components/ui/badge"
 import { Skeleton } from "@/src/components/ui/skeleton"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { Calendar, User, Phone, FileText, Clock, CheckCircle, XCircle, Image as ImageIcon, MessageCircle, Send } from "lucide-react"
+import { Calendar, User, Phone, FileText, Clock, CheckCircle, XCircle, Image as ImageIcon, MessageCircle, Send, AlertTriangle } from "lucide-react"
 import { useMessageById } from "../hooks/use-message"
+import { explicarErrorWhatsApp } from "@/src/lib/errores-whatsapp"
 import Image from "next/image"
 
 interface MessageDetailsProps {
@@ -133,6 +134,26 @@ export function MessageDetails({ id }: MessageDetailsProps) {
           <span className="font-semibold">{getStatusText(message.status)}</span>
         </div>
       </div>
+
+      {/* Por que no llegó.
+          Antes esta pantalla decia "Fallido" y nada mas. La columna con el
+          motivo ya existia en la base de datos y no se pintaba en ningun sitio,
+          asi que el unico camino era adivinar o preguntar. Casi siempre la
+          causa tiene arreglo (un numero mal escrito, la conexion de prueba
+          caducada) y con el motivo delante se arregla sola. */}
+      {(message.status === "failed" || message.status === "undelivered") && (
+        <div className="mb-6 rounded-xl border-2 border-red-200 bg-red-50 p-4 sm:p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-600" aria-hidden="true" />
+            <div className="min-w-0">
+              <p className="font-semibold text-red-900">Este mensaje no llegó</p>
+              <p className="mt-1 text-sm leading-relaxed text-red-800">
+                {explicarErrorWhatsApp(message.errorCode)}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Columna izquierda - Post y Contacto */}

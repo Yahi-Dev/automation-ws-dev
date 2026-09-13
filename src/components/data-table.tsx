@@ -547,7 +547,7 @@ export function DataTable<TData, TValue>({
                   <Badge variant="outline" className="font-mono border-gray-300" style={{ color: COLORS.dark }}>
                     {totalRows}
                   </Badge>
-                  <span>de la lista</span>
+                  <span>en total</span>
                 </div>
 
                 {selectedRows > 0 && (

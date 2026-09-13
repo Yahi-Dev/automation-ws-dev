@@ -20,6 +20,7 @@ import prisma from "@/src/lib/prisma";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { cargarConversacion, MAX_CARACTERES_RESPUESTA } from "@/src/lib/conversacion";
 import { ventanaEnPalabras } from "@/src/lib/ventana-24h";
+import { explicarErrorWhatsApp } from "@/src/lib/errores-whatsapp";
 import {
   sendWhatsAppMessage,
   getStatusCallbackUrl,
@@ -140,21 +141,31 @@ export async function POST(
       const mensaje = error instanceof Error ? error.message : "Error desconocido";
       const codigo = (error as { code?: unknown })?.code;
 
+      // Lo que se guarda en la fila es la explicacion EN CRISTIANO, no el texto
+      // en ingles de Twilio: es lo que se va a leer bajo la burbuja roja en la
+      // conversacion, meses despues, cuando nadie recuerde que paso.
+      const explicacion = explicarErrorWhatsApp(codigo);
+
       await prisma.outboundReplies
         .update({
           where: { id: fila.id },
           data: {
             status: "failed",
             errorCode: codigo != null ? String(codigo).slice(0, 32) : null,
-            errorMessage: mensaje.slice(0, MAX_ERROR),
+            errorMessage: explicacion.slice(0, MAX_ERROR),
           },
         })
         .catch(() => null);
 
-      return HttpResponse.sendServerError(
-        "No se pudo enviar la respuesta. Queda apuntada como fallida en la conversación.",
-        error
-      );
+      // El detalle tecnico se registra en el servidor; a la pantalla solo va la
+      // explicacion.
+      console.error("Fallo al enviar una respuesta de WhatsApp", {
+        replyId: fila.id,
+        codigo,
+        mensaje,
+      });
+
+      return HttpResponse.sendBadRequest(explicacion);
     }
 
     // Se devuelve la conversacion ya actualizada: la pantalla la pinta tal cual
