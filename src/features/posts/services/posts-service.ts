@@ -65,9 +65,18 @@ export async function createTemplate(data: PostFormValues): Promise<PostsRespons
       types: imagen
         ? { "twilio/media": { body: cuerpo, media: [imagen] } }
         : { "twilio/text": { body: cuerpo } },
-      friendly_name: makeFriendlyName({ text: data.text, lang: process.env.TWILIO_TEMPLATE_LANGUAGE_CODE || 'es', prefix: 'mi' }),
-      language : process.env.TWILIO_TEMPLATE_LANGUAGE_CODE || 'es',
-      variables : { "1": "Cliente" },
+      friendly_name: makeFriendlyName({ text: data.text, lang: 'es', prefix: 'mi' }),
+      language: 'es',
+      variables: { "1": "Cliente" },
+
+      // Se manda a revisar de una vez.
+      //
+      // WhatsApp solo deja escribirle a quien NO te ha escrito antes con un
+      // texto que ellos hayan aprobado. Hasta ahora la plantilla se creaba y ahi
+      // se quedaba, sin mandarse nunca a revisar: con el numero de pruebas no se
+      // nota, pero con un numero real la campana no podria salir jamas.
+      submit_for_approval: true,
+      approval_category: 'MARKETING' as const,
     }
 
     const response = await fetch("/api/whatsapp/templates", {

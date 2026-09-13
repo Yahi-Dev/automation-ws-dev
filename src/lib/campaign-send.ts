@@ -13,6 +13,7 @@ import { sendWhatsAppMessage, isValidE164, getStatusCallbackUrl, twilioBreaker }
 import { getTwilioConfig } from "./app-config";
 import { captureError } from "./logger";
 import { estadoCuota, avisoCuotaAgotada, type EstadoCuota } from "./cuota-diaria";
+import { sincronizarAprobacion, explicarEstadoPlantilla } from "./plantillas-aprobacion";
 
 const MESSAGES_CACHE_KEY = "messages-cache";
 const STUCK_MS = 90_000; // un "queued" más viejo que esto se considera colgado y es recuperable
@@ -108,14 +109,46 @@ export async function sendPostMessages(
   });
   if (!post) return { ok: false, reason: "not_found", message: "Post no encontrado" };
 
-  // Gate de plantilla
+  // --- Filtro de plantilla ---
+  //
+  // Antes solo frenaba las plantillas de categoria MARKETING sin aprobar. Las
+  // que crea la app al guardar una campana nacen SIN categoria, asi que pasaban
+  // el filtro y se enviaban sin aprobacion. Con el numero de pruebas no se nota,
+  // porque el sandbox no lo exige; con un numero real, Meta rechaza cada
+  // mensaje uno por uno.
+  //
+  // Ahora la regla es la de WhatsApp, sin matices: si hay plantilla, tiene que
+  // estar APROBADA.
   const template = post.contentTemplate;
   if (template) {
-    if (template.approvalStatus === "rejected") {
-      return { ok: false, reason: "template_rejected", message: "La plantilla fue rechazada por WhatsApp." };
+    let estado = template.approvalStatus;
+    let motivo = template.rejectionReason;
+
+    // Antes de frenar nada, se pregunta a WhatsApp. El estado guardado puede ser
+    // de hace horas, y lo normal es que una plantilla pendiente ya este
+    // aprobada. Sin esto, una campana programada se quedaria bloqueada por un
+    // dato viejo hasta que alguien entrara a pulsar "Actualizar estado" a mano.
+    if (estado !== "approved" && estado !== "rejected") {
+      const fresco = await sincronizarAprobacion(template.sid).catch(() => null);
+      if (fresco?.estado) {
+        estado = fresco.estado;
+        motivo = fresco.motivoRechazo;
+      }
     }
-    if (template.category === "MARKETING" && template.approvalStatus !== "approved") {
-      return { ok: false, reason: "template_not_approved", message: "La plantilla de marketing no está aprobada." };
+
+    if (estado === "rejected") {
+      return {
+        ok: false,
+        reason: "template_rejected",
+        message: explicarEstadoPlantilla("rejected", motivo),
+      };
+    }
+    if (estado !== "approved") {
+      return {
+        ok: false,
+        reason: "template_not_approved",
+        message: explicarEstadoPlantilla(estado),
+      };
     }
   }
 

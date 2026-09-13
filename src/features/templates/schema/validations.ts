@@ -109,6 +109,29 @@ export const templateCreateSchema = z.object({
     .record(z.string().regex(/^\d{1,2}$/), z.string().max(120))
     .default({ "1": "Cliente" }),
   types: typesSchema,
+
+  /**
+   * Mandar la plantilla a revisión de WhatsApp nada más crearla.
+   *
+   * Lo usa el guardado de campañas. Sin esto, la plantilla se quedaba en
+   * "recibida" para siempre y la campaña no podía enviarse nunca a nadie que no
+   * hubiera escrito antes — que es el 100% de una difusión.
+   *
+   * La pantalla de Plantillas NO lo usa: allí se manda a revisar a mano, porque
+   * quien la usa elige la categoría y el nombre a conciencia.
+   */
+  submit_for_approval: z.boolean().default(false),
+
+  /**
+   * Categoría con la que se pide la revisión.
+   *
+   * Importa: mandar contenido promocional como UTILITY infringe las normas de
+   * Meta, y lo que se ahorra se paga con rechazos y con la calificación del
+   * número. Las campañas de esta app son promocionales.
+   */
+  approval_category: z
+    .enum(["MARKETING", "UTILITY", "AUTHENTICATION"])
+    .default("MARKETING"),
 });
 
 export type TemplateCreateInput = z.infer<typeof templateCreateSchema>;

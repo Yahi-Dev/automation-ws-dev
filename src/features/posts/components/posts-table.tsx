@@ -4,7 +4,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { DataTable } from "@/src/components/data-table"
 import { Button } from "@/src/components/ui/button"
-import { MoreHorizontal, Edit, Trash2, Image as ImageIcon, Eye, Send, Loader2 } from "lucide-react"
+import { MoreHorizontal, Edit, Trash2, Image as ImageIcon, Eye, Send, Loader2, Clock, CheckCircle2, XCircle, AlertTriangle } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -222,6 +222,51 @@ export default function PostsTable() {
           <div className="text-sm">
             {format(raw, "dd/MM/yyyy HH:mm", { locale: es })}
           </div>
+        )
+      },
+    },
+    {
+      id: "aprobacion",
+      header: "¿Se puede enviar?",
+      cell: ({ row }) => {
+        // WhatsApp tiene que aprobar el texto antes de que se le pueda escribir
+        // a alguien que no te escribió primero. Sin esta columna, el dueño le da
+        // a Enviar, no sale nada, y no tiene forma de saber por qué.
+        const estado = row.original.contentTemplate?.approvalStatus ?? null
+        const motivo = row.original.contentTemplate?.rejectionReason
+
+        if (estado === "approved") {
+          return (
+            <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+              <CheckCircle2 className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              Lista para enviar
+            </Badge>
+          )
+        }
+        if (estado === "pending" || estado === "received") {
+          return (
+            <Badge
+              className="bg-amber-100 text-amber-800 hover:bg-amber-100"
+              title="WhatsApp revisa el texto de cada campaña. Suele tardar unos minutos."
+            >
+              <Clock className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              WhatsApp la está revisando
+            </Badge>
+          )
+        }
+        if (estado === "rejected") {
+          return (
+            <Badge variant="destructive" title={motivo ?? "WhatsApp no aceptó este texto."}>
+              <XCircle className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+              Rechazada
+            </Badge>
+          )
+        }
+        return (
+          <Badge variant="outline" title="Entra en Plantillas y pulsa Actualizar estado.">
+            <AlertTriangle className="mr-1 h-3.5 w-3.5" aria-hidden="true" />
+            Sin revisar
+          </Badge>
         )
       },
     },

@@ -14,6 +14,9 @@ export interface PostsType {
     friendlyName: string;
     sid: string;
     id: string;
+    /** received | pending | approved | rejected. Decide si la campaña puede enviarse. */
+    approvalStatus?: string | null;
+    rejectionReason?: string | null;
   };
   _count?: {
     messages: number;

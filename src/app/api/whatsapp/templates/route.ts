@@ -6,6 +6,7 @@ import { requireAuth } from "@/src/lib/authz";
 import { enforceApiLimit } from "@/src/lib/api-rate-limit";
 import { templateCreateSchema } from "@/src/features/templates/schema/validations";
 import prisma from "@/src/lib/prisma";
+import { enviarAAprobacion } from "@/src/lib/plantillas-aprobacion";
 import { parsePagination } from "@/src/lib/pagination";
 
 export const runtime = "nodejs";
@@ -90,7 +91,39 @@ export async function POST(req: NextRequest) {
             select: { id: true, sid: true, friendlyName: true, language: true, approvalStatus: true },
         });
 
-        return NextResponse.json({ success: true, template: saved }, { status: 201 });
+        // 3) Mandarla a revision de WhatsApp si quien la crea lo pidio.
+        //
+        // Va DESPUES de guardarla a proposito: si la revision falla (red, cuota),
+        // la plantilla ya existe y se puede reintentar desde la pantalla de
+        // Plantillas. Al reves se perderia y habria que volver a crearla.
+        //
+        // Y no tumba la respuesta: la plantilla se creo de verdad, y decir que
+        // no se creo haria que se creara otra igual al reintentar.
+        let enviadaARevision = false;
+        if (parsed.data.submit_for_approval) {
+            try {
+                await enviarAAprobacion(
+                    twilio.sid,
+                    parsed.data.friendly_name,
+                    parsed.data.approval_category
+                );
+                enviadaARevision = true;
+            } catch (error) {
+                console.error("No se pudo enviar la plantilla a revisión de WhatsApp", {
+                    sid: twilio.sid,
+                    error: error instanceof Error ? error.message : "Error desconocido",
+                });
+            }
+        }
+
+        return NextResponse.json(
+            {
+                success: true,
+                template: { ...saved, approvalStatus: enviadaARevision ? "pending" : saved.approvalStatus },
+                enviadaARevision,
+            },
+            { status: 201 }
+        );
     } catch (e: unknown) {
         const { message, details, status } = extractError(e);
         // No exponer 'details' internos en producción (posible fuga de info).

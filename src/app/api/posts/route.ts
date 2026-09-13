@@ -47,7 +47,16 @@ export async function GET(req: Request) {
       prisma.posts.findMany({
         where,
         include: {
-          contentTemplate: { select: { id: true, sid: true, friendlyName: true } },
+          contentTemplate: {
+            select: {
+              id: true,
+              sid: true,
+              friendlyName: true,
+              // Sin esto la pantalla no puede decir POR QUE una campana no sale.
+              approvalStatus: true,
+              rejectionReason: true,
+            },
+          },
           _count: { select: { messages: true } }, // 👈 contador por relación
           images: {
             where: {
@@ -121,7 +130,16 @@ export async function POST(req: Request) {
         },
         include: {
           images: true,
-          contentTemplate: { select: { id: true, sid: true, friendlyName: true } },
+          contentTemplate: {
+            select: {
+              id: true,
+              sid: true,
+              friendlyName: true,
+              // Sin esto la pantalla no puede decir POR QUE una campana no sale.
+              approvalStatus: true,
+              rejectionReason: true,
+            },
+          },
         }
       })
     );
