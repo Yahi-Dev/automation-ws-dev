@@ -43,12 +43,28 @@ export async function createPost(data: PostFormValues): Promise<PostsResponse> {
 export async function createTemplate(data: PostFormValues): Promise<PostsResponse> {
   try {
 
+    // El texto del mensaje. `data.text` siempre viene del formulario, pero el
+    // respaldo se queda por si alguna vez se llama sin el.
+    const cuerpo = data.text || "Hola {{1}}, ¡gracias por escribirnos! 🙌";
+
+    // Si la campaña lleva foto, la plantilla tiene que ser de tipo MEDIA y la
+    // imagen va DENTRO de ella.
+    //
+    // Antes siempre se creaba `twilio/text`, y con plantilla de texto WhatsApp
+    // ignora cualquier imagen que se mande por fuera. Resultado: se podía
+    // adjuntar una foto a la campaña, se veía en pantalla, y al cliente le
+    // llegaba el mensaje pelado. Sin ningún aviso, porque no falla nada: es que
+    // simplemente no se manda.
+    //
+    // (`process.env` aquí valía siempre undefined, porque este archivo corre en
+    // el navegador y la variable no llevaba el prefijo NEXT_PUBLIC_. Es decir,
+    // el tipo era 'twilio/text' pasara lo que pasara.)
+    const imagen = data.images?.[0]?.url;
+
     const payload = {
-      types: {
-        [process.env.TWILIO_TEMPLATE_DEFAULT_TYPE || 'twilio/text']: {
-          body: data.text || process.env.TWILIO_TEMPLATE_ALT_TEXT || "Hola {{1}}, ¡gracias por escribirnos! 🙌",
-        }
-      },
+      types: imagen
+        ? { "twilio/media": { body: cuerpo, media: [imagen] } }
+        : { "twilio/text": { body: cuerpo } },
       friendly_name: makeFriendlyName({ text: data.text, lang: process.env.TWILIO_TEMPLATE_LANGUAGE_CODE || 'es', prefix: 'mi' }),
       language : process.env.TWILIO_TEMPLATE_LANGUAGE_CODE || 'es',
       variables : { "1": "Cliente" },

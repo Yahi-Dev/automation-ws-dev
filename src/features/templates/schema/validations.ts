@@ -9,34 +9,59 @@
 import { z } from "zod";
 
 /**
- * URL de medio permitida.
+ * ¿La URL apunta al almacenamiento de ESTA aplicacion?
  *
- * Solo https, y solo del propio almacenamiento de la aplicacion cuando este
- * configurado (S3_PUBLIC_BASE_URL). Si no hay bucket publico definido, no se
- * admite ningun medio externo: es preferible bloquear la funcion a permitir
- * que se referencie contenido arbitrario desde el remitente de la empresa.
+ * La lista blanca no es burocracia: sin ella, cualquier usuario aprobado podia
+ * crear una plantilla `twilio/media` apuntando a una URL cualquiera, y ese
+ * contenido saldria desde el remitente de WhatsApp verificado de la empresa.
+ * Es phishing con el sello de la empresa encima.
+ *
+ * Se admiten dos almacenamientos:
+ *
+ *  - Cloudinary, que es el que usa la app. Se exige ademas que la ruta empiece
+ *    por el nombre de la cuenta propia: `res.cloudinary.com` lo comparten todas
+ *    las cuentas del mundo, asi que comprobar solo el dominio dejaria pasar
+ *    imagenes de cualquier otra.
+ *  - S3, por si alguna vez se vuelve a el (S3_PUBLIC_BASE_URL).
+ *
+ * Si no hay ninguno configurado no se admite nada. Bloquear la funcion es
+ * preferible a dejar la puerta abierta.
  */
-const mediaUrlSchema = z
-  .string()
-  .url("La URL del medio no es válida")
-  .refine((valor) => {
-    let u: URL;
-    try {
-      u = new URL(valor);
-    } catch {
-      return false;
-    }
-    if (u.protocol !== "https:") return false;
+function esMedioPropio(valor: string): boolean {
+  let u: URL;
+  try {
+    u = new URL(valor);
+  } catch {
+    return false;
+  }
+  if (u.protocol !== "https:") return false;
 
-    const base = process.env.S3_PUBLIC_BASE_URL;
-    if (!base) return false;
+  const cuentaCloudinary = process.env.CLOUDINARY_CLOUD_NAME;
+  if (cuentaCloudinary && u.hostname === "res.cloudinary.com") {
+    // La ruta es /<cuenta>/image/upload/... El primer tramo tiene que ser la
+    // cuenta propia, no la de un tercero.
+    return u.pathname.startsWith(`/${cuentaCloudinary}/`);
+  }
 
+  const base = process.env.S3_PUBLIC_BASE_URL;
+  if (base) {
     try {
       return u.origin === new URL(base).origin;
     } catch {
       return false;
     }
-  }, "Solo se admiten medios alojados en el almacenamiento de la aplicación");
+  }
+
+  return false;
+}
+
+const mediaUrlSchema = z
+  .string()
+  .url("La URL del medio no es válida")
+  .refine(
+    esMedioPropio,
+    "Solo se admiten imágenes subidas desde la propia aplicación"
+  );
 
 const textoPlantilla = z.string().min(1).max(1600);
 

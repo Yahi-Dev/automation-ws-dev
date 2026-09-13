@@ -98,7 +98,13 @@ export async function sendPostMessages(
 
   const post = await prisma.posts.findFirst({
     where: { id: postId, isDeleted: false },
-    include: { contentTemplate: true },
+    include: {
+      contentTemplate: true,
+      // La foto adjunta de la campana. Hasta ahora no se traia, asi que no se
+      // mandaba: se podia adjuntar una imagen, se veia en la pantalla de la
+      // campana, y al cliente le llegaba el texto solo. Sin ningun aviso.
+      images: { orderBy: { createdAt: "asc" }, take: 1, select: { url: true } },
+    },
   });
   if (!post) return { ok: false, reason: "not_found", message: "Post no encontrado" };
 
@@ -169,6 +175,11 @@ export async function sendPostMessages(
 
   const statusCallback = await getStatusCallbackUrl();
   const contentSid = post.contentTemplate?.sid;
+
+  // WhatsApp admite UNA imagen por mensaje, y el texto pasa a ser su pie de
+  // foto. Con plantilla no se adjunta nada: la imagen de una plantilla forma
+  // parte de lo que WhatsApp aprobo, y mandarla por fuera hace que la rechace.
+  const imagenUrl = contentSid ? undefined : post.images[0]?.url;
 
   let sent = 0;
   let failed = 0;
@@ -267,6 +278,7 @@ export async function sendPostMessages(
         body: contentSid ? undefined : post.text,
         contentSid,
         contentVariables,
+        mediaUrl: imagenUrl,
         statusCallback,
       });
       sent++;

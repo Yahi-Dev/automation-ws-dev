@@ -20,6 +20,20 @@ export type SendWhatsAppParams = {
   contentSid?: string;
   /** Variables para el template, ej: { "1": "Juan" }. */
   contentVariables?: Record<string, string>;
+  /**
+   * URL PUBLICA de una imagen para adjuntar al mensaje.
+   *
+   * Solo una: WhatsApp admite un archivo por mensaje. `body` se convierte en el
+   * pie de foto.
+   *
+   * Tiene que ser alcanzable desde internet — Twilio la descarga el, no se le
+   * puede pasar un archivo del disco. En esta app las imagenes viven en
+   * Cloudinary, que ya sirve URLs publicas.
+   *
+   * Se ignora cuando hay `contentSid`: en una plantilla, la imagen forma parte
+   * de la plantilla aprobada y mandarla aparte la rechaza WhatsApp.
+   */
+  mediaUrl?: string;
   /** URL pública a la que Twilio enviará actualizaciones de estado. */
   statusCallback?: string;
 };
@@ -32,6 +46,8 @@ type TwilioCreateOptions = {
   body?: string;
   contentSid?: string;
   contentVariables?: string;
+  /** Twilio lo espera como arreglo aunque WhatsApp solo admita uno. */
+  mediaUrl?: string[];
   statusCallback?: string;
 };
 
@@ -75,7 +91,7 @@ export async function getStatusCallbackUrl(): Promise<string | undefined> {
 
 /** Envía un único mensaje de WhatsApp vía Twilio. */
 export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
-  const { to, body, contentSid, contentVariables, statusCallback } = params;
+  const { to, body, contentSid, contentVariables, mediaUrl, statusCallback } = params;
   const cfg = await getTwilioConfig();
   const client = await getTwilioClientFromConfig();
 
@@ -105,6 +121,9 @@ export async function sendWhatsAppMessage(params: SendWhatsAppParams) {
     }
   } else {
     opts.body = body ?? "";
+    // La imagen solo viaja en los mensajes de texto libre. Con plantilla, la
+    // cabecera de imagen es parte de lo que WhatsApp aprobo.
+    if (mediaUrl) opts.mediaUrl = [mediaUrl];
   }
 
   if (statusCallback) opts.statusCallback = statusCallback;

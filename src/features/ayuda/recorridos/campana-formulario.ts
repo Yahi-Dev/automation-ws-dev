@@ -43,17 +43,10 @@ export const recorridoCampanaCrear: RecorridoAyuda = {
       alineacion: "end",
     },
     {
-      elemento: '[data-tour="campana-crear-plantilla"]',
-      titulo: "¿El mensaje lleva foto?",
-      descripcion:
-        "Aquí eliges entre dos opciones. Si el mensaje es solo texto, escoge <strong>twilio/text</strong>. Si además quieres mandar una foto, escoge <strong>twilio/media</strong>.<br>Son nombres feos, pero solo significan eso: sin foto o con foto.",
-      lado: "bottom",
-    },
-    {
       elemento: '[data-tour="campana-crear-imagen"]',
       titulo: "La foto, si la quieres poner",
       descripcion:
-        "Pulsa <strong>Seleccionar</strong> y busca la foto en tu ordenador. Solo entra <strong>una</strong> foto por mensaje y tiene que pesar menos de 5MB.<br>Si arriba escogiste solo texto, esta casilla está apagada y no hace falta tocarla.",
+        "Si quieres mandar una foto con el mensaje, pulsa <strong>Seleccionar</strong> y búscala en tu ordenador. Si no, no toques nada: la foto es opcional.<br>Solo entra <strong>una</strong> foto por mensaje y tiene que pesar menos de 5MB.",
       lado: "top",
     },
     {

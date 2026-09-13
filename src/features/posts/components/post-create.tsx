@@ -3,7 +3,6 @@
 
 import type React from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/src/components/ui/card"
-import { Select, SelectTrigger, SelectValue, SelectContent, SelectItem } from "@/components/ui/select";
 import { Input } from "@/src/components/ui/input"
 import { Label } from "@/src/components/ui/label"
 import { Alert, AlertDescription } from "@/src/components/ui/alert"
@@ -24,7 +23,7 @@ export function CreatePostForm() {
 
   const [formData, setFormData] = useState({
     schedule: "",  text: "",
-    friendlyName: "", templateType: ""
+    friendlyName: ""
   })
 
   const [images, setImages] = useState<{ url: string; file?: File }[]>([])
@@ -141,7 +140,7 @@ export function CreatePostForm() {
     const result = await create(payload)
     if (result?.success) {
       toast.success("Campaña creada")
-      setFormData({ schedule: "", text: "", friendlyName: "", templateType: "" })
+      setFormData({ schedule: "", text: "", friendlyName: "" })
       setImages([])
     }
   }
@@ -201,32 +200,13 @@ export function CreatePostForm() {
                 </p>
               </div>
 
-              {/* Tipo de plantilla */}
-              <div className="space-y-2">
-                <Label htmlFor="templateType" className="text-sm font-semibold text-gray-700">
-                  Tipo de Plantilla <span className="text-red-700">*</span>
-                </Label>
-                <Select
-                  value={formData.templateType}
-                  onValueChange={(v) => setField("templateType", v)}
-                  disabled={isLoading}
-                  required
-                >
-                  <SelectTrigger id="templateType" data-tour="campana-crear-plantilla" className="bg-white">
-                    <SelectValue placeholder="Selecciona el tipo de plantilla" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="twilio/text">twilio/text</SelectItem>
-                    <SelectItem value="twilio/media">twilio/media</SelectItem>
-                  </SelectContent>
-                </Select>
-                {errors.templateType && (
-                  <p className="text-sm text-red-600 font-medium">{errors.templateType}</p>
-                )}
-                <p className="text-sm text-gray-500">
-                  Define el tipo de contenido que se enviará (texto o media).
-                </p>
-              </div>
+              {/* Antes había aquí un desplegable obligatorio, "Tipo de Plantilla",
+                  con las opciones `twilio/text` y `twilio/media`. Eran los
+                  nombres internos de la API de Twilio, no se guardaban en
+                  ningún sitio, y lo único que hacían era apagar el botón de la
+                  foto. Obligaban a elegir entre dos palabras incomprensibles
+                  antes de poder guardar. Ahora la foto se adjunta o no se
+                  adjunta, y ya está. */}
 
               {/* Fecha y Hora */}
               <div className="space-y-2">
@@ -283,8 +263,7 @@ export function CreatePostForm() {
             {/* Subida de Imágenes */}
             <div className="space-y-2">
               <Label htmlFor="images" className="text-sm font-semibold text-gray-700">
-                Imagen {formData.templateType === "twilio/media" ? <span className="text-red-700">*</span>
-                : <span className="text-red-700">(No es necesario cargar imagen)</span>}
+                Imagen <span className="font-normal text-gray-500">(opcional)</span>
               </Label>
 
               <div className="space-y-4">
@@ -295,13 +274,13 @@ export function CreatePostForm() {
                     type="file"
                     accept="image/*"
                     onChange={handleImageUpload}
-                    disabled={formData.templateType === "twilio/text" || isLoading || isUploading || images.length >= 1}
+                    disabled={isLoading || isUploading || images.length >= 1}
                     className="flex-1"
                   />
                   <Button
                     type="button"
                     variant="outline"
-                    disabled={formData.templateType === "twilio/text" || isLoading || isUploading || images.length >= 1} // ← Deshabilitar cuando hay imagen
+                    disabled={isLoading || isUploading || images.length >= 1}
                     onClick={() => document.getElementById('images')?.click()}
                   >
                     <Upload className="h-4 w-4 mr-2" />
