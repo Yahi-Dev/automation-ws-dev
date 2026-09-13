@@ -1,0 +1,112 @@
+# Dispara las campañas programadas.
+#
+# POR QUE EXISTE
+#
+# La app deja programar una campaña para una fecha y una hora, pero está alojada
+# en Vercel, donde no hay ningún proceso encendido esperando a que llegue esa
+# hora: una función solo se ejecuta cuando alguien la llama. Sin esto, una
+# campaña programada para mañana a las 9 no sale nunca, y nadie se entera hasta
+# que el cliente pregunta por qué no le llegó.
+#
+# El cron propio de Vercel en el plan gratuito solo permite una ejecución AL DÍA,
+# que para esto no sirve de nada. GitHub Actions es gratis e ilimitado en los
+# repositorios públicos, así que este archivo hace de reloj.
+#
+# QUE HACE
+#
+# Cada 5 minutos llama a /api/whatsapp/dispatch. Ese endpoint busca las campañas
+# cuya hora ya pasó y que aún tienen mensajes pendientes, y las envía. Si no hay
+# ninguna, no hace nada y no cuesta nada.
+#
+# LO QUE HAY QUE SABER
+#
+# - GitHub no garantiza la puntualidad: en horas punta puede retrasarse, y lo
+#   normal es que una campaña de las 9:00 salga entre las 9:00 y las 9:15. Para
+#   un envío de marketing eso da igual; si alguna vez hiciera falta puntualidad
+#   al minuto, esto no vale y haría falta un servidor propio.
+# - Reintentar es seguro: el envío reclama cada mensaje antes de mandarlo, así
+#   que dos ejecuciones a la vez no mandan nada dos veces.
+# - Si falla, el workflow queda en rojo y GitHub avisa por correo. Es a
+#   propósito: un reloj que falla en silencio es peor que no tener reloj.
+
+name: Despachar campañas programadas
+
+on:
+  schedule:
+    # Cada 5 minutos, que es lo más frecuente que permite GitHub.
+    - cron: "*/5 * * * *"
+  # Permite dispararlo a mano desde la pestaña Actions, para probar.
+  workflow_dispatch:
+
+# Si una ejecución se alarga, la siguiente espera en vez de solaparse.
+# `cancel-in-progress: false` a propósito: cancelar a mitad no detendría el
+# envío (ya está corriendo en el servidor) y solo perdería el resultado.
+concurrency:
+  group: despachar-campanas
+  cancel-in-progress: false
+
+jobs:
+  despachar:
+    name: Buscar y enviar lo que toque
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Llamar al despachador
+        env:
+          # La dirección de la app. Se puede cambiar sin tocar este archivo
+          # creando una variable APP_URL en Settings > Secrets and variables.
+          APP_URL: ${{ vars.APP_URL || 'https://automation-ws.vercel.app' }}
+          # El mismo valor que la variable CRON_SECRET de Vercel.
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${CRON_SECRET}" ]; then
+            echo "Falta el secreto CRON_SECRET en este repositorio."
+            echo "Se pone en Settings > Secrets and variables > Actions,"
+            echo "con el mismo valor que tiene CRON_SECRET en Vercel."
+            exit 1
+          fi
+
+          # Tres intentos antes de darse por vencido. Un corte de red de diez
+          # segundos no tiene por que mandar un correo de alarma; una caida de
+          # verdad, si.
+          for intento in 1 2 3; do
+            echo "Intento ${intento} de 3..."
+
+            # El secreto viaja en la cabecera, no en la direccion: asi no queda
+            # escrito en los registros por los que pasa la peticion.
+            # --max-time 300 acompana al maximo del endpoint.
+            codigo=$(curl -sS -o respuesta.json -w "%{http_code}" \
+              --max-time 300 \
+              -X POST \
+              -H "Authorization: Bearer ${CRON_SECRET}" \
+              -H "Content-Type: application/json" \
+              "${APP_URL}/api/whatsapp/dispatch" || echo "000")
+
+            if [ "${codigo}" = "200" ]; then
+              echo "Respuesta de la app:"
+              # `message` resume que se hizo; si no viene, se ensena el cuerpo.
+              jq -r '.message // .' respuesta.json 2>/dev/null || cat respuesta.json
+              exit 0
+            fi
+
+            echo "La app respondio ${codigo}."
+            [ -s respuesta.json ] && cat respuesta.json || true
+
+            # 403 es el secreto mal puesto: reintentar no lo va a arreglar.
+            if [ "${codigo}" = "403" ]; then
+              echo ""
+              echo "403 = el secreto no coincide con el de Vercel."
+              echo "Revisa CRON_SECRET en los dos sitios."
+              exit 1
+            fi
+
+            [ "${intento}" -lt 3 ] && sleep 15
+          done
+
+          echo ""
+          echo "No se pudo despachar despues de 3 intentos."
+          echo "Si esto se repite, las campanas programadas NO estan saliendo."
+          exit 1

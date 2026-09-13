@@ -1,18 +1,25 @@
 // src/app/api/whatsapp/dispatch/route.ts
 // Despacha las campañas programadas cuya fecha ya venció y tienen mensajes pendientes.
-// Pensado para un cron externo (Vercel Cron, etc.). Autoriza por token (?token=CRON_SECRET)
-// o por sesión de administrador.
+// Lo llama un reloj externo cada pocos minutos: en Vercel no hay ningún proceso
+// encendido esperando a que llegue la hora de una campaña programada. Ese reloj
+// es .github/workflows/despachar-campanas.yml.
+//
+// Se identifica con CRON_SECRET, preferiblemente en la cabecera
+// `Authorization: Bearer`; también se acepta `?token=` por compatibilidad
+// (ver src/lib/cron-auth.ts). Un administrador con sesión también puede
+// dispararlo a mano.
 import { NextRequest } from "next/server";
 import { auth } from "@/src/lib/auth";
 import { HttpResponse } from "@/src/utils/httpResponse";
 import { dispatchDue } from "@/src/lib/dispatch";
 import { safeEqual } from "@/src/lib/safe-compare";
+import { secretoDeLaPeticion } from "@/src/lib/cron-auth";
 
 export const runtime = "nodejs";
 export const maxDuration = 300;
 
 async function authorize(req: NextRequest): Promise<boolean> {
-  const token = req.nextUrl.searchParams.get("token");
+  const token = secretoDeLaPeticion(req);
   const cronSecret = process.env.CRON_SECRET;
   if (cronSecret && token && safeEqual(token, cronSecret)) return true;
   const session = await auth.api.getSession({ headers: req.headers });

@@ -1,0 +1,73 @@
+# Impide que GitHub apague el reloj de las campañas.
+#
+# POR QUE EXISTE
+#
+# Este repositorio es público, y GitHub dice, con estas palabras: "In a public
+# repository, scheduled workflows are automatically disabled when no repository
+# activity has occurred in 60 days."
+#
+# Traducido a lo que significa aquí: si nadie sube ningún cambio durante dos
+# meses, GitHub apaga solo el workflow que dispara las campañas programadas. No
+# avisa a quien usa la app. Simplemente, un día las campañas programadas dejan de
+# salir y nadie sabe por qué.
+#
+# Esa es exactamente la avería peor: la que no hace ruido. Y en una app que se
+# entrega para que alguien la use sin tocar el código nunca más, dos meses de
+# quietud no son una hipótesis, son lo normal.
+#
+# QUE HACE
+#
+# Una vez por semana mira cuándo fue el último cambio del repositorio. Si hace
+# más de 40 días, sube un commit vacío. Eso reinicia la cuenta de los 60 días y
+# el reloj sigue encendido. 40 y no 59 para que quepan varios intentos fallidos
+# antes de que se cumpla el plazo.
+#
+# Un commit vacío no cambia ni una línea de código. Provoca un redespliegue en
+# Vercel del mismo código que ya estaba, que es inofensivo.
+
+name: Mantener vivo el reloj
+
+on:
+  schedule:
+    # Lunes a las 6:00 UTC. Solo hace algo cuando de verdad hace falta.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+# Lo único que necesita: poder subir un commit.
+permissions:
+  contents: write
+
+jobs:
+  mantener-vivo:
+    name: Reiniciar la cuenta de inactividad si hace falta
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # Hace falta el historial para poder leer la fecha del último commit.
+          fetch-depth: 0
+
+      - name: Subir un commit vacío si el repositorio lleva demasiado quieto
+        run: |
+          set -euo pipefail
+
+          DIAS_LIMITE=40
+
+          ultimo=$(git log -1 --format=%ct)
+          ahora=$(date +%s)
+          dias=$(( (ahora - ultimo) / 86400 ))
+
+          echo "Último cambio hace ${dias} día(s). El límite son ${DIAS_LIMITE}."
+
+          if [ "${dias}" -lt "${DIAS_LIMITE}" ]; then
+            echo "El repositorio tiene actividad reciente. No hay nada que hacer."
+            exit 0
+          fi
+
+          echo "Subiendo un commit vacío para que GitHub no apague el reloj."
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: mantener activo el disparador de campañas programadas"
+          git push
