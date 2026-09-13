@@ -1,8 +1,92 @@
 # Despliegue y operación
 
-Guía para poner `automation-ws` en producción y mantenerlo. Está escrita para
-una sola máquina con Docker Compose, que es lo que necesita este proyecto y lo
-que cuesta menos operar.
+Guía para poner `automation-ws` en producción y mantenerlo.
+
+> ## Lee esto primero: cómo está desplegado HOY
+>
+> Lo que está en marcha **no es** el Docker Compose que describe esta guía.
+> Es esto:
+>
+> | Pieza | Dónde vive |
+> |---|---|
+> | La aplicación | **Vercel** — https://automation-ws.vercel.app, se despliega solo con cada `push` a `main` |
+> | Base de datos | **TiDB Cloud Serverless** (MySQL). La URL necesita `?sslaccept=strict` |
+> | Imágenes | **Cloudinary** |
+> | Correo | **Gmail** por SMTP, con contraseña de aplicación de 16 caracteres |
+> | WhatsApp | **Twilio** |
+> | Campañas programadas | **GitHub Actions** — `.github/workflows/despachar-campanas.yml` |
+> | Redis / worker / colas | **No hay.** La app funciona sin ellos |
+>
+> El resto de la guía (Docker Compose, worker, Redis, Caddy) describe el
+> despliegue en una máquina propia, que es a donde habría que mudarse si algún
+> día hace falta un proceso permanente. Hoy no hace falta.
+
+---
+
+## 0. Las campañas programadas y el reloj externo
+
+En Vercel no hay ningún proceso encendido esperando a que llegue la hora de una
+campaña: una función solo se ejecuta cuando alguien la llama. Sin un reloj que
+la llame, una campaña programada para mañana a las 9 **no sale nunca**, y nadie
+se entera hasta que el cliente pregunta.
+
+El reloj es `.github/workflows/despachar-campanas.yml`. Cada 5 minutos hace un
+`POST` a `/api/whatsapp/dispatch`, que busca las campañas vencidas con mensajes
+pendientes y las envía.
+
+**Lo que necesita** (ya está puesto, esto es para poder rehacerlo):
+
+| Dónde | Nombre | Qué es |
+|---|---|---|
+| Vercel → Environment Variables | `CRON_SECRET` | El secreto que autoriza la llamada |
+| GitHub → Settings → Secrets → Actions | `CRON_SECRET` | **El mismo valor**, exactamente |
+| GitHub → Settings → Variables → Actions | `APP_URL` | La dirección de la app (opcional; si falta, usa la de Vercel) |
+
+Si los dos `CRON_SECRET` no coinciden, el endpoint responde **403** y el
+workflow queda en rojo. Es el fallo más probable después de rotar el secreto:
+hay que cambiarlo en los **dos** sitios.
+
+**Por qué GitHub Actions y no el cron de Vercel:** el plan gratuito de Vercel
+permite una única ejecución **al día**, que para esto no sirve de nada. GitHub
+Actions es gratis e ilimitado en repositorios públicos.
+
+**Puntualidad:** GitHub no la garantiza. Lo normal es que una campaña de las
+9:00 salga entre las 9:00 y las 9:15, y en horas punta puede tardar más. Para
+un envío de marketing da igual. Si alguna vez hiciera falta puntualidad al
+minuto, esto no vale y habría que mudarse al despliegue con worker de esta
+misma guía.
+
+### El segundo workflow, y por qué existe
+
+GitHub dice, literalmente: *"In a public repository, scheduled workflows are
+automatically disabled when no repository activity has occurred in 60 days."*
+
+Este repositorio es público. Traducido: si nadie sube ningún cambio durante dos
+meses, GitHub **apaga solo** el reloj de las campañas, sin avisar a quien usa la
+app. En un proyecto que se entrega para no volver a tocarlo, dos meses de
+quietud son lo normal.
+
+`.github/workflows/mantener-vivo.yml` lo evita: una vez por semana mira la fecha
+del último commit y, si tiene más de 40 días, sube un commit vacío. Eso reinicia
+la cuenta. No cambia ni una línea de código; solo provoca un redespliegue del
+mismo código, que es inofensivo.
+
+**Si el repositorio se vuelve privado**, esa regla de los 60 días deja de
+aplicar, pero entonces los minutos de Actions **sí** se cuentan contra la cuota
+del plan (2.000 min/mes). Una ejecución de ~10 s cada 5 minutos son unos
+1.400 min/mes: cabe, pero justo. Conviene bajar la frecuencia a cada 10 minutos
+si se hace el cambio.
+
+### Comprobar que el reloj funciona
+
+```bash
+# A mano, desde la pestaña Actions de GitHub, o:
+gh workflow run despachar-campanas.yml --repo Yahi-Dev/automation-ws-dev
+gh run list --repo Yahi-Dev/automation-ws-dev --workflow=despachar-campanas.yml --limit 5
+```
+
+Una ejecución correcta imprime `Dispatch: N campaña(s) procesada(s)`. Con `N = 0`
+significa que no había ninguna vencida, que es lo normal la mayor parte del día.
 
 ---
 
@@ -35,7 +119,8 @@ descarta la mayoría de niveles gratuitos:
 Servicios complementarios gratuitos que sí encajan: **Cloudflare** (DNS, TLS,
 WAF), **Cloudflare R2** (almacenamiento de imágenes), **Brevo** (300 correos/día
 por SMTP, compatible con nodemailer sin tocar código), **Sentry** y **GitHub
-Actions**. No hace falta cron externo: el despachador vive dentro del worker.
+Actions**. En ese despliegue no hace falta cron externo, porque el despachador
+vive dentro del worker; en el de Vercel sí lo hace falta (ver la sección 0).
 
 ---
 
